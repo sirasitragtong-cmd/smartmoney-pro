@@ -1,0 +1,2505 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SmartMoney Pro - บริหารการเงินครบวงจร</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Prop Types -->
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Recharts -->
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        // Suppress specific React warnings
+        const originalError = console.error;
+        console.error = (...args) => {
+            if (/Support for defaultProps will be removed/.test(args[0])) return;
+            originalError(...args);
+        };
+
+        tailwind.config = {
+            darkMode: 'class', // Enable Dark Mode
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#059669', // Emerald 600
+                        primaryLight: '#ecfdf5', // Emerald 50
+                        secondary: '#3b82f6', // Blue 500
+                        accent: '#f59e0b', // Amber 500
+                        danger: '#ef4444', // Red 500
+                        dark: '#0f172a', // Slate 900
+                        surface: '#ffffff',
+                        background: '#f8fafc', // Slate 50
+                    },
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif', 'system-ui'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #1e293b; transition: background-color 0.3s, color 0.3s; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .card-std { background: white; border-radius: 1rem; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); border: 1px solid #f1f5f9; transition: all 0.2s; }
+        .card-std:hover { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .input-std { width: 100%; padding: 0.75rem; background-color: #f8fafc; border-radius: 0.75rem; border: 1px solid #e2e8f0; outline: none; transition: all 0.2s; }
+        .input-std:focus { border-color: #059669; box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1); background-color: #fff; }
+        .btn-primary { background-color: #059669; color: white; padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2); display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; }
+        .btn-primary:hover { background-color: #047857; transform: translateY(-1px); }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Modal Animation */
+        .modal-enter { opacity: 0; transform: scale(0.9); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 300ms, transform 300ms; }
+        .modal-exit { opacity: 1; }
+        .modal-exit-active { opacity: 0; transform: scale(0.9); transition: opacity 300ms, transform 300ms; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        
+        /* Dark Mode Overrides */
+        body.dark { background-color: #0f172a; color: #f1f5f9; }
+        .dark .card-std { background: #1e293b; border-color: #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); }
+        .dark .input-std { background-color: #0f172a; border-color: #334155; color: #f1f5f9; }
+        .dark .input-std:focus { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); background-color: #1e293b; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; }
+        
+        /* Recharts Dark Mode Fixes */
+        .dark .recharts-text { fill: #94a3b8 !important; }
+        .dark .recharts-cartesian-grid line { stroke: #334155 !important; }
+        .dark .recharts-tooltip-wrapper .recharts-default-tooltip { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); }
+        .dark .recharts-tooltip-item { color: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, AreaChart, Area, ComposedChart, Scatter } = window.Recharts || {};
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const ref = useRef(null);
+            
+            useEffect(() => {
+                if (window.lucide && ref.current) {
+                    const iconElement = document.createElement('i');
+                    iconElement.setAttribute('data-lucide', name);
+                    iconElement.setAttribute('width', size);
+                    iconElement.setAttribute('height', size);
+                    if (className) iconElement.setAttribute('class', className);
+                    
+                    ref.current.innerHTML = '';
+                    ref.current.appendChild(iconElement);
+                    
+                    window.lucide.createIcons({
+                        root: ref.current,
+                        nameAttr: 'data-lucide',
+                        attrs: { width: size, height: size, class: className }
+                    });
+                }
+            }, [name, size, className]);
+
+            return <span ref={ref} style={{ display: 'inline-flex', verticalAlign: 'middle' }}></span>;
+        };
+
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const formatMoney = (amount) => {
+            const num = parseFloat(amount);
+            if (isNaN(num)) return '฿0.00';
+            return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+        };
+        const COLORS = ['#059669', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6'];
+        const COLORS_ALT = ['#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6', '#3b82f6', '#ef4444', '#059669', '#64748b'];
+
+        // --- Global Balance Helpers ---
+        const calculateTotalBalance = (transactions) => {
+            return transactions.reduce((acc, t) => acc + (t.type === 'income' ? parseFloat(t.amount) : -parseFloat(t.amount)), 0);
+        };
+
+        const validateBalance = (amountToSpend, transactions) => {
+            const currentBalance = calculateTotalBalance(transactions);
+            if (amountToSpend > currentBalance) {
+                const shortage = amountToSpend - currentBalance;
+                alert(`❌ ยอดเงินคงเหลือไม่พอสำหรับทำรายการ!\n\nยอดคงเหลือปัจจุบัน: ${formatMoney(currentBalance)}\nจำนวนเงินที่ต้องการ: ${formatMoney(amountToSpend)}\n\n⚠️ คุณขาดเงินอีก: ${formatMoney(shortage)}`);
+                return false;
+            }
+            return true;
+        };
+
+        // --- Notification Modal Component ---
+        const NotificationModal = ({ actions, onClose, onProcess, onNavigate }) => {
+            const sortedActions = [...actions].sort((a, b) => {
+                if (a.isPaid === b.isPaid) return 0;
+                return a.isPaid ? 1 : -1;
+            });
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative">
+                        <div className="bg-primary p-4 text-white flex justify-between items-center">
+                            <h3 className="font-bold text-lg flex items-center gap-2"><Icon name="bell-ring" /> แจ้งเตือนการชำระเงิน</h3>
+                            <button onClick={onClose} className="text-white/80 hover:text-white"><Icon name="x" /></button>
+                        </div>
+                        <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto">
+                            {sortedActions.length === 0 ? (
+                                <div className="text-center py-10 text-slate-400 flex flex-col items-center">
+                                    <Icon name="check-circle-2" size={48} className="text-emerald-200 dark:text-emerald-800 mb-3"/>
+                                    <p>ไม่มีรายการแจ้งเตือนค้างชำระ</p>
+                                    <p className="text-xs">สบายใจได้! เดือนนี้คุณจัดการทุกอย่างเรียบร้อยแล้ว</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">รายการที่ถึงกำหนดชำระในรอบเดือนนี้:</p>
+                                    {sortedActions.map((action) => (
+                                        <div key={action.id} className={`flex justify-between items-center p-3 rounded-xl border transition ${action.isPaid ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30 opacity-70' : action.type === 'budget_alert' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/30' : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 shadow-sm hover:border-red-300 dark:hover:border-red-500/50'}`}>
+                                            <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => action.type !== 'budget_alert' && onNavigate(action.type)}>
+                                                {action.isPaid ? (
+                                                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><Icon name="check" size={16}/></div>
+                                                ) : action.type === 'budget_alert' ? (
+                                                    <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center animate-pulse"><Icon name="alert-triangle" size={16}/></div>
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center relative">
+                                                        <Icon name="alert-circle" size={16}/>
+                                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className={`font-bold text-sm hover:text-blue-600 dark:hover:text-blue-400 hover:underline ${action.isPaid ? 'text-emerald-700 dark:text-emerald-500 line-through' : 'text-slate-700 dark:text-slate-200'}`}>{action.title}</p>
+                                                    <p className="text-xs text-slate-400 dark:text-slate-500">กำหนด: {action.due}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-bold text-slate-700 dark:text-slate-200 text-sm">{formatMoney(action.amount)}</p>
+                                                {action.isPaid ? (
+                                                    <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded inline-block mt-1 font-bold">จ่ายแล้ว</span>
+                                                ) : action.type !== 'budget_alert' && (
+                                                    <button onClick={() => onProcess(action)} className="text-[10px] bg-red-500 text-white px-3 py-1.5 rounded-lg mt-1 hover:bg-red-600 shadow-sm font-bold animate-pulse">จ่ายเลย</button>
+                                                )}
+                                                {action.type === 'budget_alert' && (
+                                                    <span className="text-[10px] bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 px-2 py-1 rounded inline-block mt-1 font-bold">เกินงบ!</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <p className="text-center text-[10px] text-slate-400 mt-2">*คลิกที่ชื่อรายการเพื่อไปหน้าแก้ไข</p>
+                                </>
+                            )}
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 text-center">
+                            <button onClick={onClose} className="text-slate-400 text-sm hover:text-slate-600 dark:hover:text-slate-300">ปิดหน้าต่าง</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 1. Dashboard ---
+        const Dashboard = ({ data, onChangeView, onProcessAction, onUpdateNotes, onUpdateBudgets }) => {
+            const now = new Date();
+            const currentMonthStr = now.toISOString().slice(0, 7);
+
+            const cumulativeCash = calculateTotalBalance(data.transactions);
+
+            const dcaTotal = useMemo(() => {
+                let total = 0;
+                data.transactions.forEach(t => {
+                    if (t.type === 'expense' && t.note && (t.note.includes('Auto: ออม DCA:') || t.note.includes('ลงทุน:'))) {
+                        total += parseFloat(t.amount) || 0;
+                    }
+                    if (t.type === 'income' && t.note && t.note.includes('ถอน DCA:')) {
+                        total -= parseFloat(t.amount) || 0;
+                    }
+                });
+                return Math.max(0, total);
+            }, [data.transactions]);
+            
+            const manualAssetsTotal = (data.assets || []).reduce((acc, curr) => acc + (parseFloat(curr.value) || 0), 0);
+
+            const totalRemainingDebts = useMemo(() => {
+                return data.debts.filter(d => d.type !== 'recurring').reduce((acc, cur) => {
+                    const totalAmount = parseFloat(cur.amount) || 0;
+                    const paid = data.transactions
+                        .filter(t => t.type === 'expense' && t.note && t.note.includes(cur.name))
+                        .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+                    const remaining = Math.max(0, totalAmount - paid);
+                    return acc + remaining;
+                }, 0);
+            }, [data.debts, data.transactions]);
+
+            const netWorth = cumulativeCash + dcaTotal + manualAssetsTotal - totalRemainingDebts;
+
+            const income = data.transactions
+                .filter(t => t.type === 'income' && t.date.startsWith(currentMonthStr))
+                .reduce((acc, t) => acc + (parseFloat(t.amount) || 0), 0);
+            const expense = data.transactions
+                .filter(t => t.type === 'expense' && t.date.startsWith(currentMonthStr))
+                .reduce((acc, t) => acc + (parseFloat(t.amount) || 0), 0);
+            
+            const cashFlow = income - expense;
+
+            const budgets = data.budgets || {};
+            const [isEditingBudget, setIsEditingBudget] = useState(false);
+            const [newBudgetCategory, setNewBudgetCategory] = useState('');
+            const [newBudgetAmount, setNewBudgetAmount] = useState('');
+
+            const categoryExpenses = useMemo(() => {
+                const expenses = {};
+                data.transactions
+                    .filter(t => t.type === 'expense' && t.date.startsWith(currentMonthStr))
+                    .forEach(t => {
+                        expenses[t.category] = (expenses[t.category] || 0) + (parseFloat(t.amount) || 0);
+                    });
+                return expenses;
+            }, [data.transactions, currentMonthStr]);
+
+            const pendingActions = useMemo(() => {
+                const actions = [];
+                const isPaid = (keyword, amount) => {
+                    return data.transactions.some(t => 
+                        t.type === 'expense' && 
+                        t.date.startsWith(currentMonthStr) && 
+                        (t.note?.includes(keyword) || t.category === keyword) &&
+                        Math.abs(t.amount - amount) < 100 
+                    );
+                };
+
+                data.debts.forEach(d => { 
+                    const isRecurring = d.type === 'recurring';
+                    const paidThisMonth = isPaid(d.name, d.installment);
+
+                    if (isRecurring) {
+                        actions.push({ 
+                            id: d.id, 
+                            title: `รายจ่ายประจำ: ${d.name}`, 
+                            amount: d.installment, 
+                            type: 'debt_pay', 
+                            due: `ทุกวันที่ ${d.dueDay || 1}`, 
+                            isPaid: paidThisMonth 
+                        });
+                    } else {
+                        const paidTotal = data.transactions.filter(t => t.type === 'expense' && t.note && t.note.includes(d.name)).reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+                        if (d.installment > 0 && paidTotal < d.amount) {
+                            actions.push({ 
+                                id: d.id, 
+                                title: `จ่ายหนี้: ${d.name}`, 
+                                amount: d.installment, 
+                                type: 'debt_pay', 
+                                due: `ทุกวันที่ ${d.dueDay || 1}`, 
+                                isPaid: paidThisMonth 
+                            }); 
+                        }
+                    }
+                });
+                
+                (data.dcaPlans || []).forEach(p => { if (p.active) actions.push({ id: p.id, title: `ออม DCA: ${p.assetName}`, amount: p.amount, type: 'dca_invest', due: `วันที่ ${p.dayOfMonth}`, isPaid: isPaid(p.assetName, p.amount) }); });
+                
+                if (data.retirement && data.retirement.autoSaveDay && data.retirement.monthlySaving > 0) {
+                    actions.push({ 
+                        id: 'retire_auto', 
+                        title: 'ออมเงินเกษียณ (Smart Goal)', 
+                        amount: data.retirement.monthlySaving, 
+                        type: 'retire_save', 
+                        due: `วันที่ ${data.retirement.autoSaveDay}`, 
+                        isPaid: isPaid('ออมเงินเกษียณ', data.retirement.monthlySaving) 
+                    });
+                }
+
+                (data.insurance || []).forEach(i => {
+                    const isDueThisMonth = i.dueDate && i.dueDate.split('-')[1] === String(now.getMonth() + 1).padStart(2, '0');
+                    if (isDueThisMonth || !i.dueDate) actions.push({ id: i.id, title: `จ่ายเบี้ย: ${i.company}`, amount: i.premium, type: 'ins_pay', due: i.dueDate ? `วันที่ ${new Date(i.dueDate).toLocaleDateString('th-TH')}` : 'รายปี', isPaid: isPaid(i.company, i.premium) });
+                });
+
+                Object.entries(budgets).forEach(([cat, limit]) => {
+                    const used = categoryExpenses[cat] || 0;
+                    if (used > limit) {
+                        actions.push({
+                            id: `budget_alert_${cat}`,
+                            title: `งบเกิน! หมวด${cat}`,
+                            amount: used - limit,
+                            type: 'budget_alert',
+                            due: 'แจ้งเตือน',
+                            isPaid: false
+                        });
+                    }
+                });
+
+                return actions;
+            }, [data, currentMonthStr, budgets, categoryExpenses]);
+
+            const unpaidCount = pendingActions.filter(a => !a.isPaid).length;
+            const [showPopup, setShowPopup] = useState(false);
+            const [quickNote, setQuickNote] = useState('');
+
+            const handleAddQuickNote = (e) => {
+                e.preventDefault();
+                if(!quickNote.trim()) return;
+                const newNotes = [{ id: generateId(), text: quickNote, completed: false, date: new Date().toISOString() }, ...(data.notes || [])];
+                onUpdateNotes(newNotes);
+                setQuickNote('');
+            };
+            const toggleNote = (id) => onUpdateNotes((data.notes||[]).map(n => n.id === id ? { ...n, completed: !n.completed } : n));
+            
+            const handleAddBudget = () => {
+                if (!newBudgetCategory || !newBudgetAmount) return;
+                const updatedBudgets = { ...budgets, [newBudgetCategory]: parseFloat(newBudgetAmount) };
+                onUpdateBudgets(updatedBudgets);
+                setNewBudgetCategory('');
+                setNewBudgetAmount('');
+            };
+
+            const handleDeleteBudget = (cat) => {
+                const updated = { ...budgets };
+                delete updated[cat];
+                onUpdateBudgets(updated);
+            };
+
+            const handleNavigate = (type) => {
+                setShowPopup(false);
+                if (type === 'debt_pay') onChangeView('debts');
+                else if (type === 'dca_invest') onChangeView('assets', 'dca');
+                else if (type === 'retire_save') onChangeView('retirement');
+                else if (type === 'ins_pay') onChangeView('insurance');
+            };
+
+            const defaultExpenseCategories = ['อาหาร', 'เดินทาง', 'ที่อยู่อาศัย', 'ช้อปปิ้ง', 'บันเทิง', 'สุขภาพ', 'การศึกษา', 'หนี้สิน', 'การลงทุน', 'อื่นๆ'];
+            const expenseCategories = useMemo(() => {
+                return Array.from(new Set([...defaultExpenseCategories, ...(data.customCategories?.expense || [])]));
+            }, [data.customCategories]);
+
+            return (
+                <div className="space-y-6 pb-24 md:pb-0 animate-fade-in relative">
+                    <header className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">ภาพรวมวันนี้</h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm">ยินดีต้อนรับ, {data.profile.name}</p>
+                        </div>
+                        <div className="relative cursor-pointer group z-40" onClick={() => setShowPopup(true)}>
+                            <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/50 rounded-full flex items-center justify-center text-primary dark:text-emerald-400 relative shadow-sm hover:bg-emerald-200 dark:hover:bg-emerald-800/50 transition">
+                                <Icon name="bell" size={20} />
+                                {unpaidCount > 0 && <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[9px] flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800 animate-bounce">{unpaidCount}</span>}
+                            </div>
+                        </div>
+                    </header>
+
+                    {showPopup && <NotificationModal actions={pendingActions} onClose={() => setShowPopup(false)} onProcess={onProcessAction} onNavigate={handleNavigate} />}
+
+                    {/* Category Budget Card */}
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                                <Icon name="target" className="text-blue-500 dark:text-blue-400" size={18}/> งบประมาณรายหมวด (Budgets)
+                            </h3>
+                            <button onClick={() => setIsEditingBudget(!isEditingBudget)} className="text-xs text-slate-400 hover:text-blue-500 bg-slate-100 dark:bg-slate-700 p-1.5 rounded-lg">
+                                <Icon name={isEditingBudget ? "x" : "plus"} size={14}/> {isEditingBudget ? "ปิด" : "เพิ่ม/แก้ไข"}
+                            </button>
+                        </div>
+
+                        {isEditingBudget && (
+                            <div className="mb-4 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">เพิ่มงบประมาณใหม่</p>
+                                <div className="flex gap-2">
+                                    <select value={newBudgetCategory} onChange={e=>setNewBudgetCategory(e.target.value)} className="input-std py-1 px-2 text-xs flex-1">
+                                        <option value="">เลือกหมวดหมู่</option>
+                                        {expenseCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                    <input type="number" step="0.01" value={newBudgetAmount} onChange={e=>setNewBudgetAmount(e.target.value)} className="input-std py-1 px-2 text-xs w-24" placeholder="จำนวนเงิน"/>
+                                    <button onClick={handleAddBudget} className="bg-blue-500 hover:bg-blue-600 text-white px-3 rounded-lg text-xs">บันทึก</button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                            {Object.keys(budgets).length === 0 ? (
+                                <p className="text-center text-xs text-slate-400 py-2">ยังไม่ได้ตั้งงบประมาณรายหมวด</p>
+                            ) : (
+                                Object.entries(budgets).map(([cat, limit]) => {
+                                    const used = categoryExpenses[cat] || 0;
+                                    const percent = Math.min((used / limit) * 100, 100);
+                                    const isOver = used > limit;
+                                    return (
+                                        <div key={cat} className="relative">
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="font-bold text-slate-600 dark:text-slate-300">{cat}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`${isOver ? 'text-red-500 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>{formatMoney(used)} / {formatMoney(limit)}</span>
+                                                    {isEditingBudget && <button onClick={()=>handleDeleteBudget(cat)} className="text-red-400 hover:text-red-600"><Icon name="trash-2" size={12}/></button>}
+                                                </div>
+                                            </div>
+                                            <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full transition-all duration-500 ${isOver ? 'bg-red-500' : percent > 80 ? 'bg-orange-400' : 'bg-blue-500'}`} style={{width: `${percent}%`}}></div>
+                                            </div>
+                                        </div>
+                                    )
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <div className="bg-gradient-to-br from-slate-700 to-slate-900 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
+                            <p className="text-slate-300 text-sm font-medium mb-1">ความมั่งคั่งสุทธิ (สิ้นเดือนนี้)</p>
+                            <h2 className="text-3xl font-bold tracking-tight">{formatMoney(netWorth)}</h2>
+                            <div className="mt-4 flex flex-col gap-1 text-[10px] opacity-90 bg-white/10 p-2 rounded-xl">
+                                <div className="flex justify-between"><span>+ เงินคงเหลือสะสม:</span> <span>{formatMoney(cumulativeCash)}</span></div>
+                                <div className="flex justify-between"><span>+ เงินออมและสินทรัพย์:</span> <span>{formatMoney(dcaTotal + manualAssetsTotal)}</span></div>
+                                <div className="flex justify-between text-red-300"><span>- หนี้สินคงเหลือรวม:</span> <span>{formatMoney(totalRemainingDebts)}</span></div>
+                            </div>
+                        </div>
+
+                         <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
+                            <div className="flex justify-between items-start">
+                                <p className="text-emerald-100 text-sm font-medium mb-1 flex items-center gap-1"><Icon name="wallet" size={14}/> เงินสดคงเหลือ (Total Balance)</p>
+                            </div>
+                            <h2 className="text-3xl font-bold tracking-tight">{formatMoney(cumulativeCash)}</h2>
+                             <p className="text-xs text-emerald-100 mt-4 opacity-90">*รวมยอดยกมาจากเดือนก่อนหน้าทั้งหมด</p>
+                        </div>
+
+                        <div className={`rounded-3xl p-6 shadow-lg border ${cashFlow >= 0 ? 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30'} flex flex-col justify-center`}>
+                            <div className="flex justify-between items-start mb-2">
+                                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium flex items-center gap-2"><Icon name="activity" size={16}/> กระแสเงินสดเดือนนี้</p>
+                                <span className={`text-xs px-2 py-1 rounded-full ${cashFlow >= 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>{cashFlow >= 0 ? '+' : '-'}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mt-auto w-full">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg text-center border dark:border-slate-700">รายรับ <br/><span className="text-blue-600 dark:text-blue-400 font-bold">{formatMoney(income)}</span></div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg text-center border dark:border-slate-700">รายจ่าย <br/><span className="text-red-500 dark:text-red-400 font-bold">{formatMoney(expense)}</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card-std p-5 border-l-4 border-l-purple-500">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2"><Icon name="sticky-note" className="text-purple-500"/> บันทึกช่วยจำ (Quick Notes)</h3>
+                            <button onClick={() => onChangeView('notes')} className="text-xs text-purple-500 hover:underline">จัดการทั้งหมด</button>
+                        </div>
+                        <form onSubmit={handleAddQuickNote} className="flex gap-2 mb-3">
+                            <input type="text" value={quickNote} onChange={e=>setQuickNote(e.target.value)} placeholder="จดสิ่งที่ต้องทำ..." className="input-std text-sm py-2" />
+                            <button className="bg-purple-500 text-white p-2 rounded-lg hover:bg-purple-600"><Icon name="plus" size={16}/></button>
+                        </form>
+                        <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                            {(data.notes || []).filter(n => !n.completed).slice(0, 3).map(note => (
+                                <div key={note.id} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-2 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => toggleNote(note.id)}>
+                                    <div className="w-4 h-4 border-2 border-slate-300 dark:border-slate-500 rounded-full flex-shrink-0"></div>
+                                    <span className="truncate">{note.text}</span>
+                                </div>
+                            ))}
+                            {(!data.notes || data.notes.filter(n => !n.completed).length === 0) && <p className="text-xs text-slate-400 text-center py-2">ไม่มีรายการค้าง</p>}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 2. Analytics ---
+        const Analytics = ({ data, onUpdateProfile }) => {
+            
+            // เปลี่ยนจากข้อมูลเดือนนี้ เป็นข้อมูล "ปีนี้" (Yearly)
+            const expenseData = useMemo(() => {
+                const grouped = {};
+                const currentYearStr = new Date().getFullYear().toString();
+                let total = 0;
+                
+                data.transactions
+                    .filter(t => t.type === 'expense' && t.date.startsWith(currentYearStr))
+                    .forEach(t => {
+                        const amt = parseFloat(t.amount);
+                        grouped[t.category] = (grouped[t.category] || 0) + amt;
+                        total += amt;
+                    });
+                    
+                const chartData = Object.entries(grouped)
+                    .map(([name, value]) => ({ 
+                        name, 
+                        value,
+                        percent: total > 0 ? (value / total) * 100 : 0
+                    }))
+                    .sort((a,b) => b.value - a.value);
+                    
+                return { chartData, total };
+            }, [data.transactions]);
+
+            const trendData = useMemo(() => {
+                const grouped = {};
+                for (let i=11; i>=0; i--) {
+                    const d = new Date();
+                    d.setMonth(d.getMonth() - i);
+                    const key = d.toISOString().slice(0, 7); 
+                    const shortName = d.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' });
+                    grouped[key] = { name: shortName, income: 0, expense: 0 };
+                }
+                
+                data.transactions.forEach(t => {
+                    const month = t.date.substring(0, 7);
+                    if(grouped[month]) {
+                        if(t.type === 'income') grouped[month].income += parseFloat(t.amount); 
+                        else grouped[month].expense += parseFloat(t.amount);
+                    }
+                });
+
+                return Object.values(grouped);
+            }, [data.transactions]);
+
+            const payday = data.profile.payday || 25; 
+            const handlePaydayChange = (e) => {
+                const val = parseInt(e.target.value);
+                if (val >= 1 && val <= 31) {
+                    onUpdateProfile({ ...data.profile, payday: val });
+                }
+            };
+
+            const { totalCash, daysLeft, dailyBudget, nextPaydayStr } = useMemo(() => {
+                const cash = calculateTotalBalance(data.transactions);
+                
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                
+                let targetMonth = today.getMonth();
+                let targetYear = today.getFullYear();
+                
+                if (today.getDate() >= payday) {
+                    targetMonth++;
+                    if(targetMonth > 11) {
+                        targetMonth = 0;
+                        targetYear++;
+                    }
+                }
+                
+                let lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+                let actualPayday = Math.min(payday, lastDayOfTargetMonth);
+                
+                let nextPayday = new Date(targetYear, targetMonth, actualPayday);
+                
+                const diffTime = nextPayday - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const left = diffDays > 0 ? diffDays : 1; 
+                
+                return {
+                    totalCash: cash,
+                    daysLeft: left,
+                    dailyBudget: Math.max(0, cash / left),
+                    nextPaydayStr: nextPayday.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+                };
+            }, [data.transactions, payday]);
+
+            return (
+                <div className="space-y-6 pb-24 md:pb-0 animate-fade-in">
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Icon name="pie-chart"/> วิเคราะห์เชิงลึก</h2>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        
+                        {/* เปลี่ยนเป็นสัดส่วนรายจ่ายปีนี้ พร้อมลิสต์บอกเปอร์เซ็นต์แบบหน้ารายเดือน */}
+                        <div className="card-std p-6 flex flex-col h-[450px]">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 text-center border-b border-slate-100 dark:border-slate-700 pb-2">สัดส่วนรายจ่ายปีนี้ (Yearly)</h3>
+                            <div className="h-48 w-full text-xs flex-shrink-0">
+                                {window.Recharts && expenseData.chartData.length > 0 ? (
+                                    <ResponsiveContainer>
+                                        <PieChart>
+                                            <Pie data={expenseData.chartData} innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
+                                                {expenseData.chartData.map((e, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                            </Pie>
+                                            <Tooltip formatter={v=>formatMoney(v)}/>
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+                                        <Icon name="pie-chart" size={32} className="opacity-20"/>
+                                        <p>ไม่มีข้อมูลรายจ่ายในปีนี้</p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* เพิ่มส่วนรายการโชว์ % */}
+                            <div className="flex-1 w-full overflow-y-auto custom-scrollbar mt-4 space-y-2 pr-2">
+                                {expenseData.chartData.map((item, index) => (
+                                    <div key={item.name} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full" style={{backgroundColor: COLORS[index % COLORS.length]}}></div>
+                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{item.name}</span>
+                                        </div>
+                                        <div className="text-right flex flex-col">
+                                            <span className="text-sm font-bold text-red-500 dark:text-red-400">{formatMoney(item.value)}</span>
+                                            <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded self-end mt-0.5">{item.percent.toFixed(1)}%</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="card-std p-6 h-[450px] flex flex-col">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 text-center border-b border-slate-100 dark:border-slate-700 pb-2">รายรับ vs รายจ่าย (12 เดือนย้อนหลัง)</h3>
+                            <div className="flex-1 w-full text-[10px] md:text-xs">
+                                {window.Recharts ? (
+                                    <ResponsiveContainer>
+                                        <BarChart data={trendData}>
+                                            <CartesianGrid strokeDasharray="3 3"/>
+                                            <XAxis dataKey="name"/>
+                                            <YAxis tickFormatter={v=>`${v/1000}k`}/>
+                                            <Tooltip formatter={v=>formatMoney(v)}/>
+                                            <Legend/>
+                                            <Bar dataKey="income" fill="#3b82f6" name="รายรับ"/>
+                                            <Bar dataKey="expense" fill="#ef4444" name="รายจ่าย"/>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : <div className="text-center text-slate-400 mt-10">Loading...</div>}
+                            </div>
+                        </div>
+                        
+                        <div className="card-std p-6 md:col-span-2 flex flex-col items-center relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-emerald-500"></div>
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2">
+                                <Icon name="calendar-days" className="text-blue-500"/> วิเคราะห์งบใช้จ่ายรายวัน (จนกว่าเงินเดือนจะออก)
+                            </h3>
+                            <p className="text-center text-xs text-slate-500 dark:text-slate-400 mb-6">คำนวณจากเงินสดคงเหลือสุทธิทั้งหมด หารด้วยจำนวนวันที่เหลือก่อนรับรายได้รอบถัดไป</p>
+                            
+                            <div className="grid md:grid-cols-3 gap-6 w-full mb-6">
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mb-1">เงินสดคงเหลือรวม (ในพอร์ต)</p>
+                                    <p className={`text-2xl font-bold ${totalCash >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>{formatMoney(totalCash)}</p>
+                                </div>
+                                
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mb-1">วันที่เงินเดือนออก</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm dark:text-slate-300">ทุกวันที่</span>
+                                        <input type="number" min="1" max="31" value={payday} onChange={handlePaydayChange} className="w-16 p-1 text-center border dark:border-slate-600 rounded text-lg font-bold text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-700 outline-none focus:ring-2 focus:ring-blue-500"/>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-1">รอบถัดไป: {nextPaydayStr}</p>
+                                </div>
+
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/50 flex flex-col items-center justify-center">
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-1">เหลือเวลาอีก</p>
+                                    <div className="flex items-baseline gap-1">
+                                        <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{daysLeft}</p>
+                                        <span className="text-sm text-blue-600 dark:text-blue-400">วัน</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="w-full max-w-md bg-emerald-500 text-white p-6 rounded-3xl shadow-lg text-center transform transition hover:scale-105">
+                                <p className="text-emerald-100 text-sm font-medium mb-1">งบที่สามารถใช้ได้ต่อวัน</p>
+                                <h2 className="text-5xl font-bold tracking-tight my-2">{formatMoney(dailyBudget)}</h2>
+                                <p className="text-xs text-emerald-100 opacity-90 mt-2 flex items-center justify-center gap-1">
+                                    <Icon name="info" size={12}/> พยายามใช้ไม่เกินยอดนี้ เพื่อให้มีเงินเหลือถึงสิ้นเดือน
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 3. Transactions ---
+        const Transactions = ({ data, onUpdateTransaction, onDeleteTransaction, onBatchAddTransaction, onUpdateCategories }) => { 
+            const [form, setForm] = useState({ id: null, type: 'expense', amount: '', category: '', date: new Date().toISOString().split('T')[0], note: '' });
+            const [filter, setFilter] = useState({ type: 'all', month: new Date().toISOString().slice(0, 7) });
+            const [groupBy, setGroupBy] = useState('none');
+            const [isEditing, setIsEditing] = useState(false);
+            const [showCatManager, setShowCatManager] = useState(false);
+            const [newCatName, setNewCatName] = useState('');
+            const defaultCategories = { expense: ['อาหาร', 'เดินทาง', 'ที่อยู่อาศัย', 'ช้อปปิ้ง', 'บันเทิง', 'สุขภาพ', 'การศึกษา', 'หนี้สิน', 'รายจ่ายประจำ', 'การลงทุน', 'อื่นๆ'], income: ['เงินเดือน', 'โบนัส', 'ปันผล', 'ขายของ', 'ฟรีแลนซ์', 'อื่นๆ'] };
+            const currentCategories = { expense: [...defaultCategories.expense, ...(data.customCategories?.expense || [])], income: [...defaultCategories.income, ...(data.customCategories?.income || [])] };
+            
+            useEffect(() => { if (!form.category) setForm(f => ({ ...f, category: currentCategories[f.type][0] })); }, [form.type]);
+            
+            const handleSubmit = (e) => { 
+                e.preventDefault(); 
+                if (!form.amount) return; 
+                const amount = parseFloat(form.amount);
+
+                // ตรวจสอบยอดเงินช็อต สำหรับการบันทึกรายจ่าย
+                if (form.type === 'expense') {
+                    let effectiveBalance = calculateTotalBalance(data.transactions);
+                    
+                    // หากเป็นการแก้ไข ต้องคืนเงินยอดเดิมเข้าระบบก่อนเช็คยอด
+                    if (isEditing) {
+                        const oldTx = data.transactions.find(t => t.id === form.id);
+                        if (oldTx) {
+                            if (oldTx.type === 'expense') effectiveBalance += parseFloat(oldTx.amount);
+                            else effectiveBalance -= parseFloat(oldTx.amount);
+                        }
+                    }
+
+                    if (amount > effectiveBalance) {
+                        const shortage = amount - effectiveBalance;
+                        alert(`❌ ยอดเงินคงเหลือไม่พอสำหรับทำรายการ!\n\nยอดคงเหลือสุทธิ: ${formatMoney(effectiveBalance)}\nจำนวนเงินที่ต้องการ: ${formatMoney(amount)}\n\n⚠️ คุณขาดเงินอีก: ${formatMoney(shortage)}\nจึงจะสามารถบันทึกรายการนี้ได้`);
+                        return;
+                    }
+                }
+
+                const newTx = { ...form, id: form.id || generateId(), amount }; 
+                if (isEditing) { 
+                    onUpdateTransaction(data.transactions.map(t => t.id === newTx.id ? newTx : t)); 
+                    setIsEditing(false); 
+                } else { 
+                    onBatchAddTransaction([newTx]); 
+                } 
+                setForm({ id: null, type: form.type, amount: '', category: currentCategories[form.type][0], date: new Date().toISOString().split('T')[0], note: '' }); 
+            };
+            
+            const handleAddCategory = () => { if(!newCatName.trim()) return; const type = form.type; const existing = data.customCategories?.[type] || []; if(existing.includes(newCatName)) return alert("มีหมวดหมู่นี้แล้ว"); onUpdateCategories(type, [...existing, newCatName]); setNewCatName(''); };
+            const handleDeleteCategory = (cat, type) => { if(confirm(`ลบหมวดหมู่ "${cat}"?`)) { const existing = data.customCategories?.[type] || []; onUpdateCategories(type, existing.filter(c => c !== cat)); } };
+            
+            const filteredData = data.transactions.filter(t => { const matchType = filter.type === 'all' || t.type === filter.type; const matchDate = t.date.startsWith(filter.month); return matchType && matchDate; }).sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            const renderList = () => { if (groupBy === 'none') return filteredData.map(renderItem); const groups = {}; filteredData.forEach(t => { const key = groupBy === 'date' ? t.date : t.category; if(!groups[key]) groups[key] = []; groups[key].push(t); }); return Object.entries(groups).map(([key, items]) => ( <div key={key} className="mb-4 border dark:border-slate-700 rounded-xl overflow-hidden"> <div className="bg-slate-100 dark:bg-slate-800 px-3 py-2 font-bold text-sm text-slate-600 dark:text-slate-300 flex justify-between"> <span>{groupBy === 'date' ? new Date(key).toLocaleDateString('th-TH', {weekday:'short', day:'numeric', month:'short'}) : key}</span> <span className="text-slate-400 font-normal">{items.length} รายการ</span> </div> <div className="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-900"> {items.map(renderItem)} </div> </div> )); };
+            const renderItem = (t) => ( <div key={t.id} className="p-3 flex justify-between items-center group hover:bg-slate-50 dark:hover:bg-slate-800 transition"> <div className="flex items-center gap-3"> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${t.type==='income'?'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400':'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400'}`}> <Icon name={t.type==='income'?'arrow-down-left':'arrow-up-right'} size={18}/> </div> <div> <p className="font-bold text-sm text-slate-700 dark:text-slate-200">{t.category}</p> <p className="text-xs text-slate-500 dark:text-slate-400">{t.note || '-'}</p> </div> </div> <div className="flex items-center gap-3"> <div className="text-right"> <span className={`font-bold block ${t.type==='income'?'text-blue-600 dark:text-blue-400':'text-red-600 dark:text-red-400'}`}>{formatMoney(t.amount)}</span> <span className="text-[10px] text-slate-400">{new Date(t.date).toLocaleDateString('th-TH')}</span> </div> <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition"> <button onClick={()=>{setForm(t); setIsEditing(true); window.scrollTo(0,0);}} className="p-1.5 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-800 transition"><Icon name="edit-2" size={14}/></button> <button onClick={()=>onDeleteTransaction(t.id)} className="p-1.5 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 transition"><Icon name="trash" size={14}/></button> </div> </div> </div> );
+            
+            return ( <div className="space-y-6 pb-24 md:pb-0 animate-fade-in"> <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">บันทึก รายรับ-รายจ่าย</h2> <div className="grid lg:grid-cols-3 gap-6"> <div className="lg:col-span-1"> <form onSubmit={handleSubmit} className={`card-std p-5 space-y-4 sticky top-4 border-l-4 ${isEditing ? 'border-l-orange-500' : 'border-l-primary'}`}> <h3 className="font-bold text-slate-700 dark:text-slate-200">{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่'}</h3> <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl"> <button type="button" onClick={() => setForm({...form, type: 'expense', category: currentCategories.expense[0]})} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${form.type === 'expense' ? 'bg-white dark:bg-slate-600 text-red-600 dark:text-red-400 shadow' : 'text-slate-500 dark:text-slate-300'}`}>รายจ่าย</button> <button type="button" onClick={() => setForm({...form, type: 'income', category: currentCategories.income[0]})} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${form.type === 'income' ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow' : 'text-slate-500 dark:text-slate-300'}`}>รายรับ</button> </div> <input type="number" step="0.01" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})} className="input-std text-2xl font-bold" placeholder="0.00" required /> <div className="grid grid-cols-2 gap-2"> <select value={form.category} onChange={e=>setForm({...form, category: e.target.value})} className="input-std text-sm"> {currentCategories[form.type].map(c=><option key={c} value={c}>{c}</option>)} </select> <input type="date" value={form.date} onChange={e=>setForm({...form, date: e.target.value})} className="input-std text-sm" required /> </div> <input type="text" value={form.note} onChange={e=>setForm({...form, note: e.target.value})} placeholder="โน้ตช่วยจำ" className="input-std text-sm" /> <button type="button" onClick={() => setShowCatManager(!showCatManager)} className="text-xs text-blue-500 dark:text-blue-400 underline flex items-center gap-1"><Icon name="settings" size={12}/> จัดการหมวดหมู่</button> {showCatManager && ( <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs"> <p className="font-bold mb-2 dark:text-slate-200">เพิ่มหมวดหมู่ ({form.type === 'expense' ? 'รายจ่าย' : 'รายรับ'})</p> <div className="flex gap-2 mb-2"> <input value={newCatName} onChange={e=>setNewCatName(e.target.value)} className="input-std py-1 px-2 text-xs" placeholder="ชื่อหมวดหมู่ใหม่"/> <button type="button" onClick={handleAddCategory} className="bg-primary hover:bg-emerald-700 text-white px-2 rounded-lg"><Icon name="plus" size={14}/></button> </div> <div className="space-y-1 max-h-32 overflow-y-auto custom-scrollbar pr-1"> {(data.customCategories?.[form.type] || []).map(c => ( <div key={c} className="flex justify-between bg-white dark:bg-slate-800 px-2 py-1 rounded border dark:border-slate-700 dark:text-slate-200"> <span>{c}</span> <button type="button" onClick={()=>handleDeleteCategory(c, form.type)} className="text-red-500 dark:text-red-400"><Icon name="x" size={12}/></button> </div> ))} {(!data.customCategories?.[form.type] || data.customCategories[form.type].length === 0) && <span className="text-slate-400">ยังไม่มีหมวดหมู่ที่สร้างเอง</span>} </div> </div> )} <div className="flex gap-2"> <button type="submit" className={`flex-1 py-3 rounded-xl font-bold text-white shadow-lg ${isEditing ? 'bg-orange-500 hover:bg-orange-600' : 'bg-primary hover:bg-emerald-700'}`}>{isEditing ? 'บันทึกแก้ไข' : 'เพิ่มรายการ'}</button> {isEditing && <button type="button" onClick={()=>{setIsEditing(false); setForm({...form, id: null, amount: ''})}} className="px-4 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600">ยกเลิก</button>} </div> </form> </div> <div className="lg:col-span-2 space-y-4"> <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-wrap gap-3 items-center"> <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-700 pr-3"> <span className="text-xs font-bold text-slate-500 dark:text-slate-400"><Icon name="filter" size={14}/> ประเภท:</span> <select value={filter.type} onChange={e=>setFilter({...filter, type: e.target.value})} className="bg-slate-50 dark:bg-slate-900 border-none rounded-lg px-2 py-1 text-sm outline-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 dark:text-slate-200"> <option value="all">ทั้งหมด</option> <option value="income">รายรับ</option> <option value="expense">รายจ่าย</option> </select> </div> <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-700 pr-3"> <span className="text-xs font-bold text-slate-500 dark:text-slate-400"><Icon name="calendar" size={14}/> เดือน:</span> <input type="month" value={filter.month} onChange={e=>setFilter({...filter, month: e.target.value})} className="bg-slate-50 dark:bg-slate-900 border-none rounded-lg px-2 py-1 text-sm outline-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 dark:text-slate-200" /> </div> <div className="flex items-center gap-2"> <span className="text-xs font-bold text-slate-500 dark:text-slate-400"><Icon name="layers" size={14}/> จัดกลุ่ม:</span> <div className="flex bg-slate-100 dark:bg-slate-700 p-0.5 rounded-lg"> <button onClick={()=>setGroupBy('none')} className={`px-2 py-1 text-xs rounded-md transition ${groupBy==='none'?'bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white':'text-slate-500 dark:text-slate-300'}`}>เรียงปกติ</button> <button onClick={()=>setGroupBy('date')} className={`px-2 py-1 text-xs rounded-md transition ${groupBy==='date'?'bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white':'text-slate-500 dark:text-slate-300'}`}>ตามวันที่</button> <button onClick={()=>setGroupBy('category')} className={`px-2 py-1 text-xs rounded-md transition ${groupBy==='category'?'bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white':'text-slate-500 dark:text-slate-300'}`}>ตามหมวด</button> </div> </div> </div> <div className={`space-y-2 ${groupBy !== 'none' ? '' : 'card-std overflow-hidden'}`}> {filteredData.length > 0 ? renderList() : <p className="text-center text-slate-400 py-10 bg-white dark:bg-slate-800 rounded-xl">ไม่พบรายการในช่วงเวลานี้</p>} </div> </div> </div> </div> ); 
+        };
+
+        // --- 4. Monthly & Scheduler ---
+        const MonthlyReport = ({ data, onBatchAddTransaction }) => { 
+            const [selectedMonth, setSelectedMonth] = useState(() => { 
+                const now = new Date(); 
+                return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`; 
+            }); 
+            
+            const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0]); 
+            
+            const handleManualTrigger = () => { 
+                const conf = confirm(`ต้องการบันทึกรายการรายจ่ายประจำ (หนี้สิน/บิล/ประกัน/ออม) ของวันที่ ${scheduleDate} ใช่หรือไม่?`); 
+                if(conf) { 
+                    const newTxs = []; 
+                    const [y, m, d] = scheduleDate.split('-'); 
+                    const targetDay = parseInt(d); 
+                    const targetMonth = parseInt(m); 
+                    let totalExpenseRequired = 0;
+                    
+                    data.debts.forEach(d => { 
+                        if(d.installment > 0) {
+                            const isRecurring = d.type === 'recurring';
+                            newTxs.push({
+                                id: generateId(), 
+                                type: 'expense', 
+                                amount: d.installment, 
+                                category: isRecurring ? 'รายจ่ายประจำ' : 'หนี้สิน', 
+                                date: scheduleDate, 
+                                note: `Auto: ${isRecurring ? 'จ่ายบิล' : 'ผ่อน'} ${d.name}`
+                            });
+                            totalExpenseRequired += d.installment;
+                        } 
+                    }); 
+                    (data.insurance||[]).forEach(i => { 
+                        if(i.dueDate) { 
+                            const [iY, iM, iD] = i.dueDate.split('-'); 
+                            if(parseInt(iM) === targetMonth && parseInt(iD) === targetDay) { 
+                                newTxs.push({id: generateId(), type: 'expense', amount: i.premium, category: 'สุขภาพ', date: scheduleDate, note: `Auto: เบี้ยประกัน ${i.company}`}); 
+                                totalExpenseRequired += parseFloat(i.premium);
+                            } 
+                        } 
+                    }); 
+                    if (data.retirement && data.retirement.autoSaveDay && parseInt(data.retirement.autoSaveDay) === targetDay) { 
+                        const retAmt = parseFloat(data.retirement.monthlySaving);
+                        newTxs.push({id: generateId(), type: 'expense', amount: retAmt, category: 'การลงทุน', date: scheduleDate, note: 'Auto: ออมเงินเกษียณ'}); 
+                        totalExpenseRequired += retAmt;
+                    } 
+                    
+                    if(newTxs.length > 0) { 
+                        // ตรวจสอบยอดเงินช็อต
+                        if (!validateBalance(totalExpenseRequired, data.transactions)) return;
+                        
+                        onBatchAddTransaction(newTxs); 
+                        alert(`✅ บันทึก ${newTxs.length} รายการเรียบร้อย (ยอดรวม ${formatMoney(totalExpenseRequired)})`); 
+                    } else { 
+                        alert("ไม่พบรายการที่ตรงกับวันนี้"); 
+                    } 
+                } 
+            }; 
+            
+            const broughtForward = useMemo(() => {
+                if (!data.transactions || data.transactions.length === 0) return 0;
+                const startOfSelectedMonth = new Date(`${selectedMonth}-01T00:00:00`);
+                return data.transactions.reduce((acc, t) => {
+                    const txDate = new Date(`${t.date}T00:00:00`);
+                    if (txDate < startOfSelectedMonth) {
+                        return acc + (t.type === 'income' ? parseFloat(t.amount) : -parseFloat(t.amount));
+                    }
+                    return acc;
+                }, 0);
+            }, [data.transactions, selectedMonth]);
+
+            const { dailyData, dailyStats } = useMemo(() => { 
+                const [y, m] = selectedMonth.split('-'); 
+                const days = new Date(y, m, 0).getDate(); 
+                const res = []; 
+                let totalExp = 0; 
+                let totalInc = 0;
+                let maxExp = 0; 
+                let maxExpDay = 0; 
+                
+                for(let i=1; i<=days; i++) { 
+                    const dStr = `${selectedMonth}-${String(i).padStart(2,'0')}`; 
+                    const txs = data.transactions.filter(t => t.date === dStr); 
+                    const inc = txs.filter(t=>t.type==='income').reduce((a,b)=>a+parseFloat(b.amount),0); 
+                    const exp = txs.filter(t=>t.type==='expense').reduce((a,b)=>a+parseFloat(b.amount),0); 
+                    
+                    totalInc += inc;
+                    totalExp += exp; 
+                    if (exp > maxExp) { maxExp = exp; maxExpDay = i; } 
+                    res.push({ day: i, date: dStr, income: inc, expense: exp }); 
+                } 
+                
+                const avgExp = totalExp / days; 
+                return { dailyData: res, dailyStats: { totalExp, totalInc, avgExp, maxExp, maxExpDay } }; 
+            }, [data.transactions, selectedMonth]); 
+
+            const totalCumulative = broughtForward + dailyStats.totalInc - dailyStats.totalExp;
+
+            const categoryBreakdown = useMemo(() => {
+                const expenses = data.transactions.filter(t => t.type === 'expense' && t.date.startsWith(selectedMonth));
+                const grouped = {};
+                let total = 0;
+                
+                expenses.forEach(t => {
+                    const amt = parseFloat(t.amount);
+                    grouped[t.category] = (grouped[t.category] || 0) + amt;
+                    total += amt;
+                });
+
+                const chartData = Object.entries(grouped)
+                    .map(([name, value]) => ({ 
+                        name, 
+                        value, 
+                        percent: total > 0 ? (value / total) * 100 : 0 
+                    }))
+                    .sort((a, b) => b.value - a.value);
+
+                return { chartData, total };
+            }, [data.transactions, selectedMonth]);
+
+            return ( 
+                <div className="space-y-6 pb-24 animate-fade-in"> 
+                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4"> 
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">สรุปรายเดือน & จัดการรอบบิล</h2> 
+                        <div className="flex flex-wrap gap-2"> 
+                            <input type="month" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} className="input-std w-auto"/> 
+                            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"> 
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">ดึงรายการรายเดือน:</span> 
+                                <input type="date" value={scheduleDate} onChange={e=>setScheduleDate(e.target.value)} className="text-sm outline-none bg-transparent text-slate-700 dark:text-slate-200 font-bold"/> 
+                                <button onClick={handleManualTrigger} className="bg-primary hover:bg-emerald-700 text-white p-1.5 rounded-lg transition"><Icon name="download" size={14}/></button> 
+                            </div> 
+                        </div> 
+                    </div> 
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4"> 
+                        <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-center"><p className="text-xs text-slate-500 dark:text-slate-400 font-bold">ยอดยกมาจากเดือนก่อน</p><p className="font-bold text-lg text-slate-700 dark:text-slate-200">{formatMoney(broughtForward)}</p></div> 
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30 shadow-sm flex flex-col justify-center"><p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">รายรับเดือนนี้</p><p className="font-bold text-lg text-emerald-700 dark:text-emerald-300">+{formatMoney(dailyStats.totalInc)}</p></div> 
+                        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30 shadow-sm flex flex-col justify-center"><p className="text-xs text-red-600 dark:text-red-400 font-bold">รายจ่ายเดือนนี้</p><p className="font-bold text-lg text-red-700 dark:text-red-300">-{formatMoney(dailyStats.totalExp)}</p></div> 
+                        <div className={`p-4 rounded-xl border shadow-sm flex flex-col justify-center ${totalCumulative >= 0 ? 'bg-emerald-600 border-emerald-700 text-white' : 'bg-red-500 border-red-600 text-white'}`}>
+                            <p className="text-xs font-bold opacity-90">เงินคงเหลือสะสมสุทธิ</p>
+                            <p className="font-bold text-2xl">{formatMoney(totalCumulative)}</p>
+                        </div> 
+                    </div> 
+
+                    <div className="flex flex-wrap gap-3 mt-1">
+                        <span className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-300 shadow-sm flex items-center gap-1"><Icon name="trending-down" size={14} className="text-red-400"/> เฉลี่ยจ่ายวันละ: <b className="text-slate-800 dark:text-slate-100">{formatMoney(dailyStats.avgExp)}</b></span>
+                        <span className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs text-slate-600 dark:text-slate-300 shadow-sm flex items-center gap-1"><Icon name="flame" size={14} className="text-orange-500"/> จ่ายเยอะสุดวันที่ {dailyStats.maxExpDay}: <b className="text-orange-600 dark:text-orange-400">{formatMoney(dailyStats.maxExp)}</b></span>
+                        {dailyStats.avgExp > 1000 && <span className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 px-3 py-1.5 rounded-lg text-xs text-red-600 dark:text-red-400 shadow-sm flex items-center gap-1"><Icon name="alert-circle" size={14}/> ระวัง! ค่าเฉลี่ยรายวันสูง</span>}
+                    </div>
+
+                    <div className="card-std p-6 h-72 w-full text-xs mt-2">
+                        {window.Recharts ? (
+                            <ResponsiveContainer>
+                                <BarChart data={dailyData}>
+                                    <CartesianGrid strokeDasharray="3 3"/>
+                                    <XAxis dataKey="day"/>
+                                    <YAxis tickFormatter={v=>`${v/1000}k`}/>
+                                    <Tooltip formatter={v=>formatMoney(v)}/>
+                                    <Legend/>
+                                    <Bar dataKey="income" fill="#3b82f6" name="รายรับ"/>
+                                    <Bar dataKey="expense" fill="#ef4444" name="รายจ่าย"/>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : 'Loading...'}
+                    </div> 
+
+                    <div className="grid md:grid-cols-2 gap-6 mt-6">
+                        <div className="card-std p-6 flex flex-col items-center">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 w-full mb-4 text-center">สัดส่วนการใช้จ่ายรายหมวดเดือนนี้</h3>
+                            <div className="h-64 w-full text-xs">
+                                {window.Recharts && categoryBreakdown.chartData.length > 0 ? (
+                                    <ResponsiveContainer>
+                                        <PieChart>
+                                            <Pie 
+                                                data={categoryBreakdown.chartData} 
+                                                innerRadius={60} 
+                                                outerRadius={80} 
+                                                paddingAngle={5} 
+                                                dataKey="value"
+                                            >
+                                                {categoryBreakdown.chartData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip formatter={(val)=>formatMoney(val)}/>
+                                            <Legend />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+                                        <Icon name="pie-chart" size={32} className="opacity-20"/>
+                                        <p>ไม่มีข้อมูลรายจ่ายในเดือนนี้</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="card-std p-6 overflow-hidden flex flex-col h-[350px]">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">รายละเอียดค่าใช้จ่าย (เดือน {selectedMonth})</h3>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
+                                {categoryBreakdown.chartData.length > 0 ? categoryBreakdown.chartData.map((item, index) => (
+                                    <div key={item.name} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-3 h-3 rounded-full" style={{backgroundColor: COLORS[index % COLORS.length]}}></div>
+                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{item.name}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-sm font-bold text-red-500 dark:text-red-400 block">{formatMoney(item.value)}</span>
+                                            <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{item.percent.toFixed(1)}%</span>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="h-full flex items-center justify-center">
+                                        <p className="text-center text-slate-400">ยังไม่มีรายการบันทึก</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+            ) 
+        };
+
+        // --- 5. Assets ---
+        const Assets = ({ data, onUpdateAssets, onUpdateProfile, onUpdateDcaPlans, onBatchAddTransaction, initialTab = 'portfolio' }) => { 
+            const [tab, setTab] = useState(initialTab); 
+            useEffect(()=>{ setTab(initialTab) },[initialTab]); 
+            
+            const [ci, setCi] = useState({ principal: 100000, monthly: 5000, rate: 5, years: 10, result: 0 }); 
+            const [dcaForm, setDcaForm] = useState({ assetName: '', amount: '', dayOfMonth: '1' }); 
+            const [investForm, setInvestForm] = useState({ assetName: '', amount: '', date: new Date().toISOString().split('T')[0] });
+            const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+            const [withdrawForm, setWithdrawForm] = useState({ amount: '', assetName: '', date: new Date().toISOString().split('T')[0] });
+            const [newManualAsset, setNewManualAsset] = useState({ name: '', value: '' });
+
+            useEffect(() => { const r = ci.rate / 100 / 12; const n = ci.years * 12; const fv = ci.principal * Math.pow(1+r, n) + (ci.monthly * (Math.pow(1+r, n) - 1)) / r; setCi(prev => ({...prev, result: fv})); }, [ci.principal, ci.monthly, ci.rate, ci.years]); 
+            
+            // --- DCA Functions ---
+            const handleAddDca = (e) => { e.preventDefault(); if(!dcaForm.assetName || !dcaForm.amount) return; onUpdateDcaPlans([...(data.dcaPlans || []), { id: generateId(), ...dcaForm, amount: parseFloat(dcaForm.amount), active: true }]); setDcaForm({ assetName: '', amount: '', dayOfMonth: '1' }); }; 
+            
+            const isPaidThisMonth = (plan) => {
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                return data.transactions.some(t => 
+                    t.type === 'expense' && 
+                    t.date.startsWith(currentMonth) && 
+                    t.note?.includes(plan.assetName) &&
+                    Math.abs(parseFloat(t.amount) - plan.amount) < 100
+                );
+            };
+
+            const handleProcessDca = (plan) => {
+                if (!validateBalance(plan.amount, data.transactions)) return;
+                
+                if(confirm(`ยืนยันการออม DCA "${plan.assetName}" ยอด ${formatMoney(plan.amount)}?`)) {
+                     onBatchAddTransaction([{
+                        id: generateId(),
+                        type: 'expense',
+                        amount: plan.amount,
+                        category: 'การลงทุน',
+                        date: new Date().toISOString().split('T')[0],
+                        note: `Auto: ออม DCA: ${plan.assetName}`
+                    }]);
+                }
+            };
+
+            // --- One-Time Invest Function ---
+            const handleOneTimeInvest = (e) => {
+                e.preventDefault();
+                if(!investForm.assetName || !investForm.amount) return;
+                
+                const amount = parseFloat(investForm.amount);
+                if (!validateBalance(amount, data.transactions)) return;
+                
+                if(confirm(`ยืนยันการซื้อ "${investForm.assetName}" ยอด ${formatMoney(amount)}?`)) {
+                    onBatchAddTransaction([{
+                        id: generateId(),
+                        type: 'expense',
+                        amount: amount,
+                        category: 'การลงทุน',
+                        date: investForm.date,
+                        note: `ลงทุน: ${investForm.assetName}`
+                    }]);
+                    alert('บันทึกการลงทุนเรียบร้อย ข้อมูลจะถูกนำไปรวมในพอร์ตการลงทุน');
+                    setInvestForm({ assetName: '', amount: '', date: new Date().toISOString().split('T')[0] });
+                }
+            };
+
+            // --- Add Manual Asset Function ---
+            const handleAddManualAsset = (e) => {
+                e.preventDefault();
+                if (!newManualAsset.name) return;
+                const updated = [...(data.assets || []), {
+                    id: generateId(),
+                    name: newManualAsset.name,
+                    type: 'อื่นๆ',
+                    value: newManualAsset.value 
+                }];
+                onUpdateAssets(updated);
+                setNewManualAsset({ name: '', value: '' });
+            };
+
+            // --- Investment Stats & Time Series Calculation ---
+            const dcaStats = useMemo(() => {
+                const stats = {};
+                let totalVal = 0;
+
+                data.transactions.forEach(t => {
+                    if (t.type === 'expense' && t.note && (t.note.includes('Auto: ออม DCA:') || t.note.includes('ลงทุน:'))) {
+                        let assetName = '';
+                        if (t.note.includes('Auto: ออม DCA:')) assetName = t.note.split('Auto: ออม DCA: ')[1]?.trim();
+                        else if (t.note.includes('ลงทุน:')) assetName = t.note.split('ลงทุน: ')[1]?.trim();
+                        
+                        if (assetName) stats[assetName] = (stats[assetName] || 0) + parseFloat(t.amount);
+                    }
+                    if (t.type === 'income' && t.note && t.note.includes('ถอน DCA:')) {
+                        const assetName = t.note.split('ถอน DCA: ')[1]?.trim();
+                        if (assetName) stats[assetName] = (stats[assetName] || 0) - parseFloat(t.amount);
+                    }
+                });
+
+                const chartData = Object.entries(stats)
+                    .map(([name, value]) => ({ name, value }))
+                    .filter(item => item.value > 0)
+                    .sort((a, b) => b.value - a.value);
+
+                totalVal = chartData.reduce((acc, curr) => acc + curr.value, 0);
+                const finalData = chartData.map(item => ({...item, percent: totalVal > 0 ? (item.value / totalVal) * 100 : 0 }));
+
+                return { stats, chartData: finalData, totalVal };
+            }, [data.transactions]);
+
+            const portfolioTimeData = useMemo(() => {
+                const monthlyInvested = {};
+                let minDate = new Date().toISOString().slice(0, 7);
+                let maxDate = new Date().toISOString().slice(0, 7);
+
+                data.transactions.forEach(t => {
+                    if (t.type === 'expense' && t.note && (t.note.includes('Auto: ออม DCA:') || t.note.includes('ลงทุน:'))) {
+                        const m = t.date.slice(0, 7);
+                        if (m < minDate) minDate = m;
+                        if (m > maxDate) maxDate = m;
+                        monthlyInvested[m] = (monthlyInvested[m] || 0) + parseFloat(t.amount);
+                    }
+                    if (t.type === 'income' && t.note && t.note.includes('ถอน DCA:')) {
+                        const m = t.date.slice(0, 7);
+                        if (m < minDate) minDate = m;
+                        if (m > maxDate) maxDate = m;
+                        monthlyInvested[m] = (monthlyInvested[m] || 0) - parseFloat(t.amount);
+                    }
+                });
+
+                const result = [];
+                let cumulative = 0;
+                let current = new Date(`${minDate}-01`);
+                const end = new Date(`${maxDate}-01`);
+                
+                while (current <= end) {
+                    const mStr = current.toISOString().slice(0, 7);
+                    const netInvest = monthlyInvested[mStr] || 0;
+                    cumulative += netInvest;
+                    result.push({
+                        month: new Date(mStr).toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }),
+                        invested: netInvest,
+                        cumulative: cumulative
+                    });
+                    current.setMonth(current.getMonth() + 1);
+                }
+                if (result.length === 0) {
+                     result.push({ month: new Date().toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }), invested: 0, cumulative: 0 });
+                }
+                return result;
+            }, [data.transactions]);
+
+            const manualAssetsChartData = useMemo(() => {
+                const assets = (data.assets || []).map(a => ({
+                    ...a,
+                    numericValue: parseFloat(a.value) || 0
+                })).filter(a => a.numericValue > 0);
+                
+                const total = assets.reduce((acc, curr) => acc + curr.numericValue, 0);
+                return {
+                    list: assets.map(a => ({...a, percent: total > 0 ? (a.numericValue / total) * 100 : 0})),
+                    total
+                };
+            }, [data.assets]);
+
+            const handleWithdraw = (e) => {
+                e.preventDefault();
+                const amount = parseFloat(withdrawForm.amount);
+                if(!amount || !withdrawForm.assetName) return;
+
+                const currentAvailable = dcaStats.stats[withdrawForm.assetName] || 0;
+                if(amount > currentAvailable) {
+                    alert(`ยอดเงินที่ถอนได้ไม่เพียงพอ! คุณมี "${withdrawForm.assetName}" สะสมอยู่ ${formatMoney(currentAvailable)}`);
+                    return;
+                }
+
+                if(confirm(`ยืนยันการถอนเงิน ${formatMoney(amount)} จาก "${withdrawForm.assetName}"?`)) {
+                    onBatchAddTransaction([{
+                        id: generateId(),
+                        type: 'income',
+                        amount: amount,
+                        category: 'การลงทุน', 
+                        date: withdrawForm.date,
+                        note: `ถอน DCA: ${withdrawForm.assetName}`
+                    }]);
+                    alert("ถอนเงินสำเร็จ! ยอดเงินถูกบันทึกเป็นรายรับและเพิ่มเข้าเงินคงเหลือเรียบร้อยแล้ว");
+                    setWithdrawForm({ amount: '', assetName: '', date: new Date().toISOString().split('T')[0] });
+                    setShowWithdrawModal(false);
+                }
+            };
+
+            return ( <div className="space-y-6 pb-24 animate-fade-in"><div className="flex gap-4 border-b border-slate-200 dark:border-slate-700 pb-2 overflow-x-auto"><button onClick={()=>setTab('portfolio')} className={`font-bold pb-2 px-2 whitespace-nowrap ${tab==='portfolio'?'text-primary dark:text-emerald-400 border-b-2 border-primary dark:border-emerald-400':'text-slate-400 dark:text-slate-500'}`}>พอร์ตลงทุน</button><button onClick={()=>setTab('dca')} className={`font-bold pb-2 px-2 whitespace-nowrap ${tab==='dca'?'text-primary dark:text-emerald-400 border-b-2 border-primary dark:border-emerald-400':'text-slate-400 dark:text-slate-500'}`}>แผน DCA & ซื้อปกติ</button><button onClick={()=>setTab('tools')} className={`font-bold pb-2 px-2 whitespace-nowrap ${tab==='tools'?'text-primary dark:text-emerald-400 border-b-2 border-primary dark:border-emerald-400':'text-slate-400 dark:text-slate-500'}`}>คำนวณดอกเบี้ย</button></div> 
+            
+            {tab === 'portfolio' && (
+                <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between md:items-center gap-4">
+                        <div className="absolute top-0 right-0 p-4 opacity-10"><Icon name="trending-up" size={120} /></div>
+                        <div className="relative z-10">
+                            <p className="text-emerald-100 text-sm mb-1 flex items-center gap-2"><Icon name="pie-chart" size={16}/> พอร์ตการลงทุนรวมของคุณ (Total Wealth)</p>
+                            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">{formatMoney(dcaStats.totalVal + manualAssetsChartData.total)}</h2>
+                            <p className="text-xs text-emerald-100 mt-2 opacity-80 flex gap-4">
+                                <span>จากประวัติการซื้อ: {formatMoney(dcaStats.totalVal)}</span>
+                                <span>|</span>
+                                <span>จากสินทรัพย์ที่บันทึกเอง: {formatMoney(manualAssetsChartData.total)}</span>
+                            </p>
+                        </div>
+                        <div className="relative z-10">
+                             <button onClick={() => setShowWithdrawModal(true)} className="bg-white/20 hover:bg-white/30 text-white px-5 py-2.5 rounded-xl font-bold shadow-sm transition backdrop-blur-sm border border-white/20 flex items-center gap-2 w-full md:w-auto justify-center">
+                                <Icon name="log-out" size={18}/> ถอนเงินลงทุน
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="card-std p-5 w-full">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2"><Icon name="bar-chart-2" className="text-blue-500"/> การเติบโตของพอร์ตลงทุน (คำนวณจากประวัติการซื้อเท่านั้น)</h3>
+                            <div className="h-72 w-full text-xs">
+                                {window.Recharts ? (
+                                    <ResponsiveContainer>
+                                        <ComposedChart data={portfolioTimeData}>
+                                            <CartesianGrid strokeDasharray="3 3"/>
+                                            <XAxis dataKey="month" scale="band" />
+                                            <YAxis yAxisId="left" tickFormatter={v=>`${v/1000}k`} />
+                                            <YAxis yAxisId="right" orientation="right" tickFormatter={v=>`${v/1000}k`} />
+                                            <Tooltip formatter={(value, name) => [formatMoney(value), name === 'invested' ? 'ยอดลงทุนเดือนนี้' : 'มูลค่าสะสม']} />
+                                            <Legend />
+                                            <Bar yAxisId="left" dataKey="invested" barSize={30} fill="#3b82f6" name="ยอดลงทุนสุทธิ (รายเดือน)" radius={[4, 4, 0, 0]} />
+                                            <Line yAxisId="right" type="monotone" dataKey="cumulative" stroke="#059669" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} name="มูลค่าพอร์ตสะสม" />
+                                            <Scatter yAxisId="right" dataKey="cumulative" fill="#059669" />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                ) : <div className="text-center text-slate-400 mt-10">Loading Chart...</div>}
+                            </div>
+                        </div>
+
+                        <div className="grid lg:grid-cols-2 gap-6">
+                            <div className="card-std p-5 flex flex-col h-[500px]">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-2"><Icon name="pie-chart" className="text-blue-500"/> สัดส่วนพอร์ต (จากประวัติการซื้อ)</h3>
+                                
+                                <div className="h-56 w-full text-xs flex-shrink-0">
+                                    {window.Recharts && dcaStats.chartData.length > 0 ? (
+                                        <ResponsiveContainer>
+                                            <PieChart>
+                                                <Pie data={dcaStats.chartData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" nameKey="name">
+                                                    {dcaStats.chartData.map((e, i) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
+                                                </Pie>
+                                                <Tooltip formatter={v=>formatMoney(v)}/>
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+                                            <Icon name="package-open" size={32} className="opacity-20"/>
+                                            <p className="text-sm">ยังไม่มีข้อมูลการลงทุน</p>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                                    {dcaStats.chartData.map((item, index) => (
+                                        <div key={item.name} className="flex justify-between items-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 transition">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: COLORS[index % COLORS.length]}}></div>
+                                                <span className="font-bold text-sm text-slate-700 dark:text-slate-200">{item.name} <span className="text-[10px] text-slate-400 font-normal ml-1">({item.percent.toFixed(1)}%)</span></span>
+                                            </div>
+                                            <span className="font-bold text-sm text-blue-600 dark:text-blue-400">{formatMoney(item.value)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="card-std p-5 flex flex-col h-[500px] border-t-4 border-t-orange-400">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
+                                    <div className="flex items-center gap-2"><Icon name="edit-3" className="text-orange-500"/> สินทรัพย์อื่นๆ (บันทึก/แก้ไขได้)</div>
+                                </h3>
+                                
+                                <div className="h-56 w-full text-xs flex-shrink-0">
+                                    {window.Recharts && manualAssetsChartData.list.length > 0 ? (
+                                        <ResponsiveContainer>
+                                            <PieChart>
+                                                <Pie data={manualAssetsChartData.list} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="numericValue" nameKey="name">
+                                                    {manualAssetsChartData.list.map((e, i) => <Cell key={`cell-${i}`} fill={COLORS_ALT[i % COLORS_ALT.length]} />)}
+                                                </Pie>
+                                                <Tooltip formatter={v=>formatMoney(v)}/>
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+                                            <Icon name="inbox" size={32} className="opacity-20"/>
+                                            <p className="text-sm text-center">ยังไม่มีข้อมูลสินทรัพย์<br/>เพิ่มข้อมูลด้านล่างได้เลยครับ</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <form onSubmit={handleAddManualAsset} className="flex gap-2 mb-3 mt-2">
+                                    <input type="text" placeholder="ชื่อสินทรัพย์ (เช่น ที่ดิน)" value={newManualAsset.name} onChange={e=>setNewManualAsset({...newManualAsset, name: e.target.value})} className="input-std py-1.5 px-3 text-sm flex-1"/>
+                                    <input type="number" step="0.01" placeholder="มูลค่า" value={newManualAsset.value} onChange={e=>setNewManualAsset({...newManualAsset, value: e.target.value})} className="input-std py-1.5 px-3 text-sm w-24"/>
+                                    <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white px-3 rounded-xl transition shadow-sm"><Icon name="plus" size={16}/></button>
+                                </form>
+
+                                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                                    {(data.assets || []).map((a, index) => {
+                                        const parsedValue = parseFloat(a.value) || 0;
+                                        const percent = manualAssetsChartData.total > 0 ? ((parsedValue / manualAssetsChartData.total) * 100).toFixed(1) : 0;
+                                        
+                                        return (
+                                            <div key={a.id} className="flex justify-between items-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700 transition group">
+                                                <div className="flex items-center gap-2 overflow-hidden mr-2">
+                                                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{backgroundColor: COLORS_ALT[index % COLORS_ALT.length]}}></div>
+                                                    <span className="font-bold text-sm text-slate-700 dark:text-slate-200 truncate" title={a.name}>{a.name} <span className="text-[10px] text-slate-400 font-normal">({percent}%)</span></span>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={a.value}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            const updated = data.assets.map(x => x.id === a.id ? { ...x, value: val } : x);
+                                                            onUpdateAssets(updated);
+                                                        }}
+                                                        className="w-24 text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg py-1 px-2 text-sm font-bold text-orange-600 dark:text-orange-400 outline-none focus:border-orange-500 transition shadow-inner"
+                                                        placeholder="0"
+                                                    />
+                                                    <button onClick={() => onUpdateAssets(data.assets.filter(x => x.id !== a.id))} className="text-slate-400 hover:text-red-500 p-1 bg-white dark:bg-slate-700 rounded-lg border dark:border-slate-600 shadow-sm opacity-50 group-hover:opacity-100 transition">
+                                                        <Icon name="trash-2" size={14}/>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {tab === 'dca' && (
+                <div className="grid lg:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                         <form onSubmit={handleOneTimeInvest} className="card-std p-5 border-l-4 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10">
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400"><Icon name="zap" size={16}/></div>
+                                <div>
+                                    <h3 className="font-bold text-slate-700 dark:text-slate-200">ซื้อสินทรัพย์ (ซื้อครั้งเดียว)</h3>
+                                    <p className="text-xs text-slate-500">บันทึกเป็นรายจ่ายและเข้าพอร์ตทันที</p>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">ชื่อสินทรัพย์ (เช่น กองทุน SCB)</label>
+                                    <input type="text" placeholder="ระบุชื่อสินทรัพย์" value={investForm.assetName} onChange={e=>setInvestForm({...investForm, assetName: e.target.value})} className="input-std text-sm"/>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">จำนวนเงิน</label>
+                                        <input type="number" step="0.01" placeholder="0.00" value={investForm.amount} onChange={e=>setInvestForm({...investForm, amount: e.target.value})} className="input-std text-sm font-bold text-emerald-600 dark:text-emerald-400"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">วันที่ซื้อ</label>
+                                        <input type="date" value={investForm.date} onChange={e=>setInvestForm({...investForm, date: e.target.value})} className="input-std text-sm"/>
+                                    </div>
+                                </div>
+                                <button type="submit" className="btn-primary w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow mt-2">ยืนยันการซื้อ</button>
+                            </div>
+                        </form>
+
+                        <form onSubmit={handleAddDca} className="card-std p-5 border-l-4 border-blue-500">
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400"><Icon name="calendar-clock" size={16}/></div>
+                                <div>
+                                    <h3 className="font-bold text-slate-700 dark:text-slate-200">ตั้งค่าแผน DCA (ออมอัตโนมัติ)</h3>
+                                    <p className="text-xs text-slate-500">ระบบจะช่วยแจ้งเตือนให้ซื้อทุกเดือน</p>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">ชื่อสินทรัพย์ที่ต้องการ DCA</label>
+                                    <input type="text" placeholder="เช่น Bitcoin, K-SET50" value={dcaForm.assetName} onChange={e=>setDcaForm({...dcaForm, assetName: e.target.value})} className="input-std text-sm"/>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">จำนวนเงินต่อเดือน</label>
+                                        <input type="number" step="0.01" placeholder="0.00" value={dcaForm.amount} onChange={e=>setDcaForm({...dcaForm, amount: e.target.value})} className="input-std text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">วันที่ตัดเงิน (1-31)</label>
+                                        <input type="number" min="1" max="31" value={dcaForm.dayOfMonth} onChange={e=>setDcaForm({...dcaForm, dayOfMonth: e.target.value})} className="input-std text-sm"/>
+                                    </div>
+                                </div>
+                                <button type="submit" className="btn-primary w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow mt-2">บันทึกแผน DCA</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-end">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200">รายการ DCA ของฉัน</h3>
+                        </div>
+                        <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
+                            {(data.dcaPlans || []).map(plan => {
+                                const paid = isPaidThisMonth(plan);
+                                return (
+                                    <div key={plan.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 flex-shrink-0">
+                                                <Icon name="repeat" size={18}/>
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-700 dark:text-slate-200">{plan.assetName}</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                    ออม <span className="font-bold text-slate-700 dark:text-slate-300">{formatMoney(plan.amount)}</span> ทุกวันที่ <span className="font-bold text-slate-700 dark:text-slate-300">{plan.dayOfMonth}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 justify-end w-full md:w-auto mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-700">
+                                            {paid ? (
+                                                <span className="text-xs bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-lg font-bold cursor-default flex items-center gap-1"><Icon name="check-circle-2" size={14}/> ชำระเดือนนี้แล้ว</span>
+                                            ) : (
+                                                <button onClick={()=>handleProcessDca(plan)} className="text-xs bg-blue-600 text-white px-4 py-1.5 rounded-lg hover:bg-blue-700 shadow-sm transition flex items-center gap-1 font-bold"><Icon name="check" size={14}/> ชำระเลย</button>
+                                            )}
+                                            <button onClick={()=>onUpdateDcaPlans(data.dcaPlans.filter(p=>p.id!==plan.id))} className="text-slate-400 dark:text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-slate-700 p-1.5 rounded-lg transition"><Icon name="trash-2" size={14}/></button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {(data.dcaPlans || []).length === 0 && (
+                                <div className="text-center py-10 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-400">
+                                    <Icon name="calendar-plus" size={32} className="mx-auto mb-2 opacity-50"/>
+                                    <p>ยังไม่ได้ตั้งค่าแผนออมรายเดือน</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )} 
+
+            {showWithdrawModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-5 relative">
+                        <button onClick={() => setShowWithdrawModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><Icon name="x"/></button>
+                        <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-100 flex items-center gap-2"><Icon name="log-out" className="text-orange-500"/> ถอนเงินจากพอร์ต</h3>
+                        <form onSubmit={handleWithdraw} className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">เลือกสินทรัพย์ที่ต้องการถอน</label>
+                                <select value={withdrawForm.assetName} onChange={e=>setWithdrawForm({...withdrawForm, assetName: e.target.value})} className="input-std" required>
+                                    <option value="">-- เลือกรายการ --</option>
+                                    {dcaStats.chartData.map(item => (
+                                        <option key={item.name} value={item.name}>{item.name} (มี {formatMoney(item.value)})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">จำนวนเงิน</label>
+                                <input type="number" step="0.01" value={withdrawForm.amount} onChange={e=>setWithdrawForm({...withdrawForm, amount: e.target.value})} className="input-std font-bold text-lg text-orange-600 dark:text-orange-400" placeholder="0.00" required />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">วันที่ถอน</label>
+                                <input type="date" value={withdrawForm.date} onChange={e=>setWithdrawForm({...withdrawForm, date: e.target.value})} className="input-std text-sm" required />
+                            </div>
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl text-xs text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30">
+                                <p className="flex items-center gap-1 font-bold"><Icon name="info" size={12}/> หมายเหตุ:</p>
+                                <p>ยอดเงินที่ถอนจะถูกนำไปบันทึกเป็น "รายรับ" อัตโนมัติ เพื่อให้กระแสเงินสดของคุณถูกต้อง</p>
+                            </div>
+                            <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-lg">ยืนยันการถอน</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+            
+            {tab === 'tools' && (<div className="card-std p-6 max-w-2xl mx-auto"><h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2"><Icon name="calculator"/> เครื่องมือคำนวณดอกเบี้ยทบต้น</h3><div className="grid grid-cols-2 gap-4 mb-6"><div><label className="text-xs text-slate-500 dark:text-slate-400">เงินต้นเริ่มต้น</label><input type="number" step="0.01" value={ci.principal} onChange={e=>setCi({...ci, principal: Number(e.target.value)})} className="input-std"/></div><div><label className="text-xs text-slate-500 dark:text-slate-400">ออมเพิ่มต่อเดือน</label><input type="number" step="0.01" value={ci.monthly} onChange={e=>setCi({...ci, monthly: Number(e.target.value)})} className="input-std"/></div><div><label className="text-xs text-slate-500 dark:text-slate-400">ผลตอบแทน (%) ต่อปี</label><input type="number" step="0.01" value={ci.rate} onChange={e=>setCi({...ci, rate: Number(e.target.value)})} className="input-std"/></div><div><label className="text-xs text-slate-500 dark:text-slate-400">ระยะเวลา (ปี)</label><input type="number" step="0.01" value={ci.years} onChange={e=>setCi({...ci, years: Number(e.target.value)})} className="input-std"/></div></div><div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 p-6 rounded-2xl text-center"><p className="text-emerald-600 dark:text-emerald-400 text-sm mb-1">มูลค่าในอนาคต</p><h2 className="text-4xl font-bold text-emerald-700 dark:text-emerald-300">{formatMoney(ci.result)}</h2><p className="text-xs text-emerald-500 dark:text-emerald-500 mt-2">ดอกเบี้ยที่ได้รับ: {formatMoney(ci.result - (ci.principal + ci.monthly * 12 * ci.years))}</p></div></div>)}</div>) };
+        
+        // --- 6. Retirement ---
+        const Retirement = ({ data, onUpdateRetirement, onBatchAddTransaction }) => {
+            const params = {
+                currentAge: 30,
+                retireAge: 60,
+                lifeExpectancy: 85,
+                currentSavings: 0,
+                monthlySaving: 0, 
+                autoSaveDay: '', 
+                expectedReturn: 5,
+                ...data.retirement
+            };
+
+            const [localParams, setLocalParams] = useState(params);
+            const [isEditingGoal, setIsEditingGoal] = useState(false);
+            const [editDay, setEditDay] = useState(localParams.autoSaveDay || '1');
+            
+            useEffect(() => {
+                setLocalParams(prev => ({...prev, ...data.retirement}));
+            }, [data.retirement]);
+
+            const currentAge = parseInt(localParams.currentAge) || 0;
+            const retireAge = parseInt(localParams.retireAge) || 0;
+            const lifeExpectancy = parseInt(localParams.lifeExpectancy) || 0;
+            const currentSavings = parseFloat(localParams.currentSavings) || 0;
+            const expenseAfterRetire = parseFloat(localParams.expenseAfterRetire) || 0;
+            const expectedReturn = 5; 
+
+            const yearsToInvest = Math.max(0, retireAge - currentAge);
+            const yearsRetirement = Math.max(0, lifeExpectancy - retireAge);
+            const r = (expectedReturn / 100) / 12;
+            const monthsToInvest = yearsToInvest * 12;
+
+            const requiredFund = expenseAfterRetire * yearsRetirement * 12;
+            const fv_current = currentSavings * Math.pow(1 + r, monthsToInvest);
+            const shortfall = Math.max(0, requiredFund - fv_current);
+
+            let suggestedSaving = 0;
+            if (shortfall > 0 && monthsToInvest > 0) {
+                 suggestedSaving = (shortfall * r) / (Math.pow(1 + r, monthsToInvest) - 1);
+            }
+
+            const savingToUse = localParams.monthlySaving > 0 ? localParams.monthlySaving : suggestedSaving;
+            
+            const calculation = useMemo(() => {
+                let chart = []; 
+                let balance = currentSavings;
+                for (let i = 0; i <= yearsToInvest; i++) {
+                    chart.push({ age: parseInt(currentAge) + i, balance });
+                    for (let m = 0; m < 12; m++) {
+                        balance = balance * (1 + r) + savingToUse;
+                    }
+                }
+                return { chart, peak: balance };
+            }, [currentAge, yearsToInvest, currentSavings, r, savingToUse]);
+
+            const progressPercent = requiredFund > 0 ? Math.min((currentSavings / requiredFund) * 100, 100) : 0;
+
+            const handleSaveSettings = () => {
+                const newParams = {
+                    ...localParams,
+                    monthlySaving: Math.ceil(suggestedSaving),
+                    autoSaveDay: editDay
+                };
+                onUpdateRetirement(newParams);
+                alert(`✅ บันทึกแผนเกษียณเรียบร้อย!\nระบบจะแจ้งเตือนให้คุณออม ฿${Math.ceil(suggestedSaving).toLocaleString()} ทุกวันที่ ${editDay} ของเดือน`);
+            };
+
+            const handleAddSaving = () => {
+                const amount = savingToUse;
+                if(amount <= 0) return;
+                
+                if (!validateBalance(amount, data.transactions)) return;
+
+                onBatchAddTransaction([{
+                    id: generateId(),
+                    type: 'expense',
+                    amount: amount,
+                    category: 'การลงทุน',
+                    date: new Date().toISOString().split('T')[0],
+                    note: 'ออมเงินเกษียณ (Smart Goal)'
+                }]);
+                const newSavings = currentSavings + amount;
+                onUpdateRetirement({
+                    ...localParams,
+                    currentSavings: newSavings
+                });
+                alert(`💰 ออมเงินสำเร็จ! ยอดเงินสะสมเพิ่มขึ้นเป็น ${formatMoney(newSavings)}`);
+            };
+
+            const handleGoalUpdate = (newTotal) => {
+                const total = parseFloat(newTotal);
+                if (isNaN(total) || yearsRetirement <= 0) return;
+                const newMonthlyExpense = total / (yearsRetirement * 12);
+                setLocalParams(prev => ({ ...prev, expenseAfterRetire: Math.round(newMonthlyExpense) }));
+            };
+
+            return (
+                <div className="space-y-6 pb-24 animate-fade-in">
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">วางแผนเกษียณ (Smart Analysis)</h2>
+                    
+                    <div className="card-std p-6 bg-gradient-to-r from-slate-800 to-slate-900 text-white relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10"><Icon name="palmtree" size={100} /></div>
+                        <div className="grid md:grid-cols-2 gap-6 relative z-10">
+                            <div>
+                                <p className="text-slate-300 text-sm mb-1 flex items-center gap-2">
+                                    เป้าหมายเงินเกษียณ (Total Required)
+                                    <button onClick={() => setIsEditingGoal(!isEditingGoal)} className="text-emerald-400 hover:text-emerald-300 bg-white/10 p-1 rounded-full">
+                                        <Icon name="pencil" size={12} />
+                                    </button>
+                                </p>
+                                {isEditingGoal ? (
+                                    <div className="flex items-center gap-2">
+                                        <input 
+                                            type="number" step="0.01" autoFocus defaultValue={Math.round(requiredFund)}
+                                            onBlur={(e) => { handleGoalUpdate(e.target.value); setIsEditingGoal(false); }}
+                                            onKeyDown={(e) => { if(e.key === 'Enter') { handleGoalUpdate(e.target.value); setIsEditingGoal(false); } }}
+                                            className="bg-slate-800 text-white text-2xl font-bold rounded px-2 py-1 w-full outline-none border border-emerald-500"
+                                        />
+                                        <button onClick={()=>setIsEditingGoal(false)} className="text-xs text-slate-300">เสร็จสิ้น</button>
+                                    </div>
+                                ) : (
+                                    <h3 className="text-3xl font-bold text-emerald-400 cursor-pointer" onClick={() => setIsEditingGoal(true)}>{formatMoney(requiredFund)}</h3>
+                                )}
+                                
+                                <div className="mt-4">
+                                    <div className="flex justify-between text-xs mb-1 text-slate-300">
+                                        <span>ความคืบหน้า (มีแล้ว {formatMoney(currentSavings)})</span>
+                                        <span>{progressPercent.toFixed(1)}%</span>
+                                    </div>
+                                    <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                                        <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: `${progressPercent}%` }}></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex flex-col justify-center items-end text-right">
+                                <p className="text-slate-300 text-sm">ต้องออมเพิ่มต่อเดือน</p>
+                                <h3 className="text-4xl font-bold text-yellow-400">{formatMoney(suggestedSaving)}</h3>
+                                <p className="text-xs text-slate-400 mt-1">*เพื่อให้ถึงเป้าหมายใน {yearsToInvest} ปี</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid lg:grid-cols-3 gap-6">
+                        <div className="card-std p-5 space-y-4 h-fit">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2 border-b dark:border-slate-700 pb-2">
+                                <Icon name="settings-2" size={18}/> ข้อมูลส่วนตัว
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div><label className="text-xs text-slate-500 dark:text-slate-400 font-bold">อายุปัจจุบัน</label><input type="number" value={localParams.currentAge} onChange={e=>setLocalParams({...localParams,currentAge:e.target.value})} className="input-std"/></div>
+                                <div><label className="text-xs text-slate-500 dark:text-slate-400 font-bold">เกษียณตอน</label><input type="number" value={localParams.retireAge} onChange={e=>setLocalParams({...localParams,retireAge:e.target.value})} className="input-std"/></div>
+                            </div>
+                            <div><label className="text-xs text-slate-500 dark:text-slate-400 font-bold">อายุขัยคาดการณ์</label><input type="number" value={localParams.lifeExpectancy} onChange={e=>setLocalParams({...localParams,lifeExpectancy:e.target.value})} className="input-std"/></div>
+                            <div><label className="text-xs text-slate-500 dark:text-slate-400 font-bold">เงินเก็บที่มีเพื่อเกษียณ</label><input type="number" step="0.01" value={localParams.currentSavings} onChange={e=>setLocalParams({...localParams,currentSavings:e.target.value})} className="input-std bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-bold"/></div>
+                            <div><label className="text-xs text-slate-500 dark:text-slate-400 font-bold">ต้องการใช้หลังเกษียณ/เดือน</label><input type="number" step="0.01" value={localParams.expenseAfterRetire} onChange={e=>setLocalParams({...localParams,expenseAfterRetire:e.target.value})} className="input-std bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400 font-bold"/></div>
+                        </div>
+
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                    <Icon name="check-square" size={18} className="text-blue-500 dark:text-blue-400"/> แผนปฏิบัติการ (Action Plan)
+                                </h3>
+                                <div className="flex flex-col md:flex-row gap-4 items-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50 mb-4">
+                                    <div className="flex-1">
+                                        <p className="font-bold text-blue-800 dark:text-blue-300 text-sm">1. ยืนยันแผนการออม</p>
+                                        <p className="text-xs text-blue-600 dark:text-blue-400">ระบบจะสร้างการแจ้งเตือนให้คุณออม {formatMoney(suggestedSaving)} ทุกเดือน</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-blue-500 dark:text-blue-400">เตือนทุกวันที่:</span>
+                                        <input type="number" min="1" max="31" value={editDay} onChange={e=>setEditDay(e.target.value)} className="w-12 p-1 text-center border dark:border-slate-600 rounded text-sm dark:bg-slate-800 dark:text-white"/>
+                                        <button onClick={handleSaveSettings} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm transition">บันทึกแผนนี้</button>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col md:flex-row gap-4 items-center bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50">
+                                    <div className="flex-1">
+                                        <p className="font-bold text-emerald-800 dark:text-emerald-300 text-sm">2. ลงมือทำทันที</p>
+                                        <p className="text-xs text-emerald-600 dark:text-emerald-400">กดปุ่มนี้เมื่อคุณโอนเงินเข้าบัญชีเงินออมแล้ว ระบบจะบันทึกรายจ่ายและเพิ่มยอดสะสมให้</p>
+                                    </div>
+                                    <button onClick={handleAddSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition flex items-center gap-2">
+                                        <Icon name="piggy-bank" size={18}/> ออมเงิน {formatMoney(savingToUse)}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="card-std p-5">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2">เส้นทางการเติบโตของเงินออม</h3>
+                                <div className="h-64 w-full text-xs">
+                                    {window.Recharts && (
+                                        <ResponsiveContainer>
+                                            <AreaChart data={calculation.chart}>
+                                                <defs>
+                                                    <linearGradient id="colorBal" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#059669" stopOpacity={0.8}/>
+                                                        <stop offset="95%" stopColor="#059669" stopOpacity={0}/>
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3"/>
+                                                <XAxis dataKey="age" label={{ value: 'อายุ', position: 'insideBottom', offset: -5 }}/>
+                                                <YAxis tickFormatter={v=>`${(v/1000000).toFixed(1)}M`}/>
+                                                <Tooltip formatter={v=>formatMoney(v)} labelFormatter={v=>`อายุ ${v} ปี`}/>
+                                                <Area type="monotone" dataKey="balance" stroke="#059669" fill="url(#colorBal)" name="เงินสะสม"/>
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    )}
+                                </div>
+                                <p className="text-center text-xs text-slate-400 mt-2">กราฟแสดงยอดเงินสะสมคาดการณ์จนถึงอายุ {retireAge} ปี</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 7. Debts ---
+        const Debts = ({ data, onUpdateDebts, onBatchAddTransaction }) => {
+            const [tab, setTab] = useState('list');
+            const [isEditing, setIsEditing] = useState(false);
+            const [form, setForm] = useState({ id: null, type: 'debt', name: '', amount: '', installment: '', dueDay: '1', rate: '' });
+            
+            const debtsWithProgress = useMemo(() => {
+                return data.debts.map(d => {
+                    const isRecurring = d.type === 'recurring';
+                    const paidMonth = data.transactions.some(t => {
+                        const currentMonth = new Date().toISOString().slice(0, 7);
+                        return t.type === 'expense' && t.date.startsWith(currentMonth) && t.note?.includes(d.name);
+                    });
+
+                    if (isRecurring) {
+                        return { ...d, isRecurring: true, paidMonth };
+                    } else {
+                        const paid = data.transactions.filter(t => t.type === 'expense' && t.note && t.note.includes(d.name)).reduce((a,b) => a + parseFloat(b.amount), 0);
+                        const remaining = Math.max(0, d.amount - paid);
+                        return { ...d, isRecurring: false, paid, remaining, percent: Math.min((paid/d.amount)*100, 100) };
+                    }
+                }).sort((a, b) => {
+                    if (a.isRecurring === b.isRecurring) return (b.rate || 0) - (a.rate || 0);
+                    return a.isRecurring ? 1 : -1; 
+                });
+            }, [data.debts, data.transactions]);
+
+            const summary = useMemo(() => {
+                return debtsWithProgress.filter(d => !d.isRecurring).reduce((acc, cur) => {
+                    acc.totalAmount += cur.amount;
+                    acc.totalPaid += cur.paid;
+                    acc.totalRemaining += cur.remaining;
+                    return acc;
+                }, { totalAmount: 0, totalPaid: 0, totalRemaining: 0 });
+            }, [debtsWithProgress]);
+
+            const handlePayDebt = (debt) => {
+                if (!validateBalance(debt.installment, data.transactions)) return;
+
+                const isRecurring = debt.type === 'recurring';
+                const actionName = isRecurring ? `จ่ายบิล "${debt.name}"` : `ชำระหนี้ "${debt.name}"`;
+                
+                if(confirm(`ยืนยันการ ${actionName} ยอด ${formatMoney(debt.installment)} ประจำเดือนนี้?`)) {
+                    onBatchAddTransaction([{
+                        id: generateId(),
+                        type: 'expense',
+                        amount: debt.installment,
+                        category: isRecurring ? 'รายจ่ายประจำ' : 'หนี้สิน',
+                        date: new Date().toISOString().split('T')[0],
+                        note: `Auto: ${isRecurring ? 'จ่ายบิล' : 'ผ่อน'} ${debt.name}`
+                    }]);
+                }
+            };
+
+            const handleSubmitDebt = (e) => {
+                e.preventDefault();
+                if(!form.name || !form.installment) return alert('กรุณากรอกชื่อและยอดที่ต้องจ่ายต่อเดือน');
+                
+                const newDebt = {
+                    id: form.id || generateId(),
+                    type: form.type,
+                    name: form.name,
+                    amount: form.type === 'recurring' ? 0 : parseFloat(form.amount) || 0,
+                    installment: parseFloat(form.installment) || 0,
+                    rate: form.type === 'recurring' ? 0 : parseFloat(form.rate) || 0,
+                    dueDay: form.dueDay || '1'
+                };
+
+                if (isEditing) {
+                    onUpdateDebts(data.debts.map(d => d.id === newDebt.id ? newDebt : d));
+                    setIsEditing(false);
+                } else {
+                    onUpdateDebts([...data.debts, newDebt]);
+                }
+                
+                setForm({ id: null, type: form.type, name: '', amount: '', installment: '', dueDay: '1', rate: '' });
+            };
+
+            const handleEditClick = (debt) => {
+                setForm({
+                    id: debt.id,
+                    type: debt.type || 'debt',
+                    name: debt.name,
+                    amount: debt.amount || '',
+                    installment: debt.installment || '',
+                    dueDay: debt.dueDay || '1',
+                    rate: debt.rate || ''
+                });
+                setIsEditing(true);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            return (
+                <div className="space-y-6 pb-24 animate-fade-in">
+                    <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+                        <button onClick={()=>setTab('list')} className={`font-bold pb-2 px-2 ${tab==='list'?'text-primary dark:text-emerald-400 border-b-2 border-primary dark:border-emerald-400':'text-slate-400 dark:text-slate-500'}`}>รายการทั้งหมด</button>
+                        <button onClick={()=>setTab('strategy')} className={`font-bold pb-2 px-2 ${tab==='strategy'?'text-primary dark:text-emerald-400 border-b-2 border-primary dark:border-emerald-400':'text-slate-400 dark:text-slate-500'}`}>กลยุทธ์แก้หนี้</button>
+                    </div>
+
+                    {tab === 'list' && (
+                        <>
+                            <div className="grid grid-cols-3 gap-3 md:gap-4 mb-2">
+                                <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
+                                    <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400">ยอดหนี้เริ่มต้นรวม</p>
+                                    <p className="font-bold text-sm md:text-base text-slate-700 dark:text-slate-200">{formatMoney(summary.totalAmount)}</p>
+                                </div>
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800/30 flex flex-col justify-center">
+                                    <p className="text-[10px] md:text-xs text-blue-600 dark:text-blue-400">จ่ายแล้วรวม</p>
+                                    <p className="font-bold text-sm md:text-base text-blue-700 dark:text-blue-300">{formatMoney(summary.totalPaid)}</p>
+                                </div>
+                                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-200 dark:border-red-800/50 flex flex-col justify-center relative overflow-hidden">
+                                    <div className="absolute -right-2 -bottom-2 opacity-10"><Icon name="alert-triangle" size={40}/></div>
+                                    <p className="text-[10px] md:text-xs font-bold text-red-600 dark:text-red-400">ยอดค้างชำระรวม</p>
+                                    <p className="font-bold text-base md:text-lg text-red-700 dark:text-red-300 z-10">{formatMoney(summary.totalRemaining)}</p>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleSubmitDebt} className={`card-std p-5 mt-4 border-l-4 ${isEditing ? 'border-l-orange-500' : 'border-l-primary'}`}>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-slate-700 dark:text-slate-200">{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่'}</h3>
+                                    {isEditing && (
+                                        <button type="button" onClick={() => { setIsEditing(false); setForm({ id: null, type: 'debt', name: '', amount: '', installment: '', dueDay: '1', rate: '' }); }} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">ยกเลิกแก้ไข</button>
+                                    )}
+                                </div>
+                                
+                                <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl mb-4 w-full md:w-1/2">
+                                    <button type="button" onClick={() => setForm({...form, type: 'debt'})} className={`flex-1 py-1.5 text-xs md:text-sm font-bold rounded-lg transition ${form.type === 'debt' ? 'bg-white dark:bg-slate-600 text-red-600 dark:text-red-400 shadow' : 'text-slate-500 dark:text-slate-300'}`}>หนี้สินทั่วไป</button>
+                                    <button type="button" onClick={() => setForm({...form, type: 'recurring'})} className={`flex-1 py-1.5 text-xs md:text-sm font-bold rounded-lg transition ${form.type === 'recurring' ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow' : 'text-slate-500 dark:text-slate-300'}`}>รายจ่ายประจำ (บิล)</button>
+                                </div>
+
+                                <div className="grid md:grid-cols-6 gap-3">
+                                    <div className="md:col-span-2">
+                                        <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">ชื่อรายการ {form.type === 'recurring' && '(เช่น ค่าไฟ, ค่าเน็ต)'}</label>
+                                        <input required placeholder="ระบุชื่อ" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} className="input-std text-sm py-2"/>
+                                    </div>
+                                    
+                                    {form.type === 'debt' && (
+                                        <>
+                                            <div>
+                                                <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">ยอดหนี้ทั้งหมด</label>
+                                                <input required type="number" step="0.01" placeholder="0" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} className="input-std text-sm py-2"/>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">ดอกเบี้ย % (ต่อปี)</label>
+                                                <input type="number" step="0.01" placeholder="0" value={form.rate} onChange={e=>setForm({...form,rate:e.target.value})} className="input-std text-sm py-2"/>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <div className={form.type === 'recurring' ? 'md:col-span-2' : ''}>
+                                        <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">ยอดที่ต้องจ่าย/เดือน</label>
+                                        <input required type="number" step="0.01" placeholder="0" value={form.installment} onChange={e=>setForm({...form,installment:e.target.value})} className="input-std text-sm py-2 font-bold text-red-500"/>
+                                    </div>
+                                    
+                                    <div className={form.type === 'recurring' ? 'md:col-span-2' : ''}>
+                                        <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">จ่ายทุกวันที่ (1-31)</label>
+                                        <input required type="number" min="1" max="31" value={form.dueDay} onChange={e=>setForm({...form,dueDay:e.target.value})} className="input-std text-sm py-2 text-center"/>
+                                    </div>
+                                    
+                                    <button type="submit" className={`md:col-span-6 mt-2 py-3 rounded-xl font-bold text-white shadow-md transition ${isEditing ? 'bg-orange-500 hover:bg-orange-600' : 'bg-primary hover:bg-emerald-700'}`}>
+                                        {isEditing ? 'บันทึกการเปลี่ยนแปลง' : 'เพิ่มรายการ'}
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div className="space-y-3 mt-6">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2">รายการที่ต้องจ่ายทั้งหมด</h3>
+                                {debtsWithProgress.map(d => {
+                                    const isCleared = !d.isRecurring && d.remaining <= 0;
+                                    
+                                    return (
+                                        <div key={d.id} className={`card-std p-4 ${isCleared ? 'opacity-70 bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200' : ''}`}>
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <h4 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                                                        {d.isRecurring ? <Icon name="receipt" size={16} className="text-blue-500"/> : <Icon name="credit-card" size={16} className="text-red-500"/>}
+                                                        {d.name} 
+                                                        {!d.isRecurring && <span className="text-xs bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 px-2 py-0.5 rounded ml-1">ดอกเบี้ย {d.rate}%</span>}
+                                                        {d.isRecurring && <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded ml-1">บิลประจำ</span>}
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                        ต้องจ่ายวันที่ {d.dueDay} | ยอดต่อเดือน: <span className="font-bold">{formatMoney(d.installment)}</span>
+                                                    </p>
+                                                    {!d.isRecurring && <p className="text-xs text-slate-400 mt-1">ยอดหนี้เริ่มต้น: {formatMoney(d.amount)}</p>}
+                                                </div>
+                                                <div className="text-right">
+                                                    {!d.isRecurring && (
+                                                        <>
+                                                            {isCleared ? (
+                                                                <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1"><Icon name="check-circle" size={14}/> ปิดยอดแล้ว</span>
+                                                            ) : (
+                                                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">{d.percent.toFixed(1)}%</span>
+                                                            )}
+                                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">จ่ายไปแล้ว: <span className="text-blue-500">{formatMoney(d.paid)}</span></p>
+                                                            {!isCleared && <p className="text-xs text-slate-500 dark:text-slate-400">ค้างชำระ: <span className="text-red-500 font-bold">{formatMoney(d.remaining)}</span></p>}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {!d.isRecurring && (
+                                                <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden mb-3">
+                                                    <div className="bg-emerald-500 h-full transition-all duration-500" style={{width:`${d.percent}%`}}></div>
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-700 pt-3 mt-2">
+                                                <div className="flex items-center gap-2">
+                                                    {isCleared ? (
+                                                        <span className="text-xs text-emerald-600 dark:text-emerald-400">ยินดีด้วย! คุณผ่อนรายการนี้หมดแล้ว 🎉</span>
+                                                    ) : d.paidMonth ? (
+                                                        <span className="text-xs bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-2 py-1.5 rounded font-bold cursor-default flex items-center gap-1"><Icon name="check" size={14}/> ชำระเดือนนี้แล้ว</span>
+                                                    ) : (
+                                                        <button onClick={()=>handlePayDebt(d)} className={`text-xs text-white px-4 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1 font-bold ${d.isRecurring ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-500 hover:bg-red-600'}`}>
+                                                            <Icon name="check" size={14}/> จ่ายเดือนนี้
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button onClick={()=>handleEditClick(d)} className="p-1.5 text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition"><Icon name="edit-2" size={16}/></button>
+                                                    <button onClick={()=>onUpdateDebts(data.debts.filter(x=>x.id!==d.id))} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"><Icon name="trash-2" size={16}/></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {debtsWithProgress.length === 0 && (
+                                    <div className="text-center py-10 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-400">
+                                        <Icon name="check-circle-2" size={32} className="mx-auto mb-2 opacity-50 text-emerald-500"/>
+                                        <p>ยอดเยี่ยม! คุณไม่มีภาระให้ต้องจ่ายในหน้านี้</p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    {tab === 'strategy' && (
+                        <div className="space-y-4">
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded-r-xl">
+                                    <h4 className="font-bold text-blue-700 dark:text-blue-400 text-lg mb-2 flex items-center gap-2"><Icon name="trending-down" size={20}/> Avalanche Method (แนะนำ)</h4>
+                                    <p className="text-sm text-blue-600 dark:text-blue-300 mb-2">เน้นจ่ายหนี้ที่มี <b>ดอกเบี้ยสูงที่สุด</b> ให้หมดก่อน แล้วค่อยไปจ่ายตัวอื่น</p>
+                                    <ul className="list-disc list-inside text-xs text-blue-500 dark:text-blue-400">
+                                        <li>ข้อดี: เสียดอกเบี้ยรวมน้อยที่สุด</li>
+                                        <li>เหมาะกับ: คนที่เน้นความคุ้มค่าทางตัวเลข</li>
+                                    </ul>
+                                </div>
+                                <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-r-xl">
+                                    <h4 className="font-bold text-orange-700 dark:text-orange-400 text-lg mb-2 flex items-center gap-2"><Icon name="snowflake" size={20}/> Snowball Method</h4>
+                                    <p className="text-sm text-orange-600 dark:text-orange-300 mb-2">เน้นจ่ายหนี้ที่มี <b>ยอดคงเหลือน้อยที่สุด</b> ให้หมดก่อน เพื่อสร้างกำลังใจ</p>
+                                    <ul className="list-disc list-inside text-xs text-orange-500 dark:text-orange-400">
+                                        <li>ข้อดี: เห็นผลเร็ว มีกำลังใจปิดหนี้ก้อนต่อไป</li>
+                                        <li>เหมาะกับ: คนที่ต้องการแรงจูงใจในการเริ่มต้น</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 mt-4">ลำดับการชำระหนี้ (แบบ Avalanche - ดอกเบี้ยสูงไปต่ำ)</h3>
+                            <div className="space-y-2">
+                                {debtsWithProgress.filter(d => !d.isRecurring && d.remaining > 0).length > 0 ? debtsWithProgress.filter(d => !d.isRecurring && d.remaining > 0).map((d,idx)=>(
+                                    <div key={d.id} className="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${idx===0 ? 'bg-red-500 animate-pulse' : 'bg-slate-400 dark:bg-slate-600'}`}>{idx+1}</div>
+                                        <div className="flex-1">
+                                            <p className="font-bold text-slate-700 dark:text-slate-200">{d.name}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">ดอกเบี้ย {d.rate}% ต่อปี</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-bold text-red-500 dark:text-red-400">{formatMoney(d.remaining)}</p>
+                                            {idx === 0 && <span className="text-[10px] bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 px-2 py-1 rounded-full font-bold">ปิดยอดนี้ก่อน!</span>}
+                                        </div>
+                                    </div>
+                                )) : <p className="text-center text-slate-400 py-10">ไม่มีหนี้สินให้จัดลำดับ หรือจ่ายครบหมดแล้ว (ไม่รวมบิลประจำ)</p>}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- 8. Tax ---
+        const TaxCalculator = ({data}) => { 
+            const [salary, setSalary] = useState(0); 
+            const [deductions, setDeductions] = useState({ social: 9000, pvd: 0, insurance: 0, donation: 0, custom: 0 }); 
+            useEffect(() => { const inc = data.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+parseFloat(b.amount),0); if(inc>0) setSalary(inc); }, []); 
+            const totalDed = 60000 + 100000 + Object.values(deductions).reduce((a,b)=>a+Number(b),0); 
+            const net = Math.max(salary - totalDed, 0); 
+            let tax=0; if(net>150000) tax+= (Math.min(net,300000)-150000)*0.05; if(net>300000) tax+= (Math.min(net,500000)-300000)*0.10; 
+
+            return ( 
+                <div className="space-y-6 pb-24 animate-fade-in">
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">วางแผนภาษี</h2>
+                    
+                    <div className="bg-orange-500 text-white p-6 rounded-3xl shadow-xl flex justify-between">
+                        <div>
+                            <p className="text-orange-100 text-sm">ภาษีที่ต้องจ่าย (ประมาณการ)</p>
+                            <h2 className="text-4xl font-bold">{formatMoney(tax)}</h2>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-orange-100 text-sm">เงินได้สุทธิ (หลังหักค่าใช้จ่าย)</p>
+                            <p className="text-xl font-bold">{formatMoney(net)}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="card-std p-6 space-y-4">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">คำนวณภาษีเบื้องต้น</h3>
+                            <div><label className="font-bold text-slate-500 dark:text-slate-400 text-xs">เงินได้ทั้งปี (ระบุเอง)</label><input type="number" step="0.01" value={salary} onChange={e=>setSalary(e.target.value)} className="input-std text-lg font-bold"/></div>
+                            <div className="space-y-3">
+                                <h4 className="font-bold text-slate-700 dark:text-slate-200 text-sm">รายการลดหย่อนที่คุณมี</h4>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div><label className="dark:text-slate-300">ประกันสังคม (สูงสุด 9k)</label><input type="number" step="0.01" value={deductions.social} onChange={e=>setDeductions({...deductions, social:e.target.value})} className="input-std p-2"/></div>
+                                    <div><label className="dark:text-slate-300">กองทุนสำรองฯ (PVD)</label><input type="number" step="0.01" value={deductions.pvd} onChange={e=>setDeductions({...deductions, pvd:e.target.value})} className="input-std p-2"/></div>
+                                    <div><label className="dark:text-slate-300">เบี้ยประกันชีวิต/สุขภาพ</label><input type="number" step="0.01" value={deductions.insurance} onChange={e=>setDeductions({...deductions, insurance:e.target.value})} className="input-std p-2"/></div>
+                                    <div><label className="dark:text-slate-300">เงินบริจาค/อื่นๆ</label><input type="number" step="0.01" value={deductions.custom} onChange={e=>setDeductions({...deductions, custom:e.target.value})} className="input-std p-2"/></div>
+                                </div>
+                                <p className="text-xs text-green-600 dark:text-green-400 text-right mt-2">*หักค่าใช้จ่ายส่วนตัว 50% (ไม่เกิน 100,000) และลดหย่อนส่วนตัว 60,000 ให้แล้ว</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="card-std p-5 border-l-4 border-l-blue-500">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2"><Icon name="calendar-clock" size={18} className="text-blue-500"/> ปฏิทินภาษี</h3>
+                                <ul className="text-sm space-y-3">
+                                    <li className="flex justify-between dark:text-slate-300"><span>ยื่นกระดาษ (ภ.ง.ด. 90/91)</span> <span className="font-bold text-slate-600 dark:text-slate-400">ม.ค. - 31 มี.ค.</span></li>
+                                    <li className="flex justify-between dark:text-slate-300"><span>ยื่นออนไลน์ (E-Filing)</span> <span className="font-bold text-blue-600 dark:text-blue-400">ม.ค. - 8 เม.ย.</span></li>
+                                    <li className="text-xs text-slate-400 dark:text-slate-500 pt-2 border-t dark:border-slate-700 mt-2">*หากมีภาษีต้องชำระเกิน 3,000 บาท สามารถผ่อน 0% ได้ 3 งวด</li>
+                                </ul>
+                            </div>
+
+                            <div className="card-std p-5 border-l-4 border-l-orange-500 max-h-80 overflow-y-auto custom-scrollbar">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2"><Icon name="list-checks" size={18} className="text-orange-500"/> รายการลดหย่อนภาษี (ยอดนิยม)</h3>
+                                <div className="space-y-3 text-xs">
+                                    <div><p className="font-bold text-slate-700 dark:text-slate-200">1. กลุ่มส่วนตัวและครอบครัว</p><p className="text-slate-500 dark:text-slate-400">- ส่วนตัว: 60,000<br/>- คู่สมรส (ไม่มีรายได้): 60,000<br/>- บุตร: คนละ 30,000<br/>- บิดามารดา (อายุ 60+): ท่านละ 30,000</p></div>
+                                    <div><p className="font-bold text-slate-700 dark:text-slate-200">2. กลุ่มประกันและการออม</p><p className="text-slate-500 dark:text-slate-400">- ประกันสังคม: ตามจริง (สูงสุด 9,000)<br/>- ประกันชีวิตทั่วไป: สูงสุด 100,000<br/>- ประกันสุขภาพ: สูงสุด 25,000 (รวมประกันชีวิตไม่เกิน 100k)</p></div>
+                                    <div><p className="font-bold text-slate-700 dark:text-slate-200">3. กลุ่มเกษียณอายุ (RMF/SSF/กบข.)</p><p className="text-slate-500 dark:text-slate-400">- RMF: 30% รายได้ (ไม่เกิน 500k)<br/>- SSF: 30% รายได้ (ไม่เกิน 200k)<br/>- กองทุนสำรองเลี้ยงชีพ: 15% รายได้ (ไม่เกิน 500k)<br/>*รวมกลุ่มนี้ทั้งหมดต้องไม่เกิน 500,000 บาท</p></div>
+                                    <div><p className="font-bold text-slate-700 dark:text-slate-200">4. กลุ่มบริจาค</p><p className="text-slate-500 dark:text-slate-400">- บริจาคทั่วไป: ตามจริง (ไม่เกิน 10% เงินได้)<br/>- บริจาคการศึกษา/รพ. (e-Donation): ลดหย่อนได้ 2 เท่า</p></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+            ) 
+        };
+
+        // --- 9. Insurance ---
+        const Insurance = ({ data, onUpdateInsurance, onBatchAddTransaction }) => { 
+            const [tab, setTab] = useState('portfolio'); 
+            const [form, setForm] = useState({ company: '', premium: '', coverage: '', type: 'health', dueDate: '' }); 
+            const insuranceInfo = [
+                { type: 'health', title: '1. ประกันสุขภาพ (Health)', desc: 'ช่วยจ่ายค่ารักษาพยาบาล ผู้ป่วยใน/นอก ไม่ต้องดึงเงินเก็บมาใช้', target: 'ทุกคน', cost: '15,000 - 40,000+' }, 
+                { type: 'life', title: '2. ประกันชีวิต (Life)', desc: 'คุ้มครองรายได้ ทิ้งเงินก้อนให้คนข้างหลังหากเสียชีวิต', target: 'หัวหน้าครอบครัว', cost: '3,000 - 20,000+' },
+                { type: 'ci', title: '3. ประกันโรคร้ายแรง (CI)', desc: 'รับเงินก้อนทันทีเมื่อตรวจเจอโรคร้าย (มะเร็ง, หัวใจ)', target: 'วัยทำงาน', cost: '2,000 - 10,000+' },
+                { type: 'pa', title: '4. ประกันอุบัติเหตุ (PA)', desc: 'ค่ารักษาจากอุบัติเหตุ บาดเจ็บเล็กน้อย-รุนแรง', target: 'คนเดินทางบ่อย', cost: '1,000 - 5,000' },
+                { type: 'saving', title: '5. ประกันสะสมทรัพย์', desc: 'เน้นออมเงิน การันตีเงินคืน ลดหย่อนภาษีได้', target: 'ต้องการลดหย่อนภาษี', cost: 'ตามทุนประกัน (เริ่ม 10k+)' }
+            ]; 
+            
+            const isPaidThisMonth = (companyName) => {
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                return data.transactions.some(t => t.type === 'expense' && t.date.startsWith(currentMonth) && t.note?.includes(companyName));
+            };
+
+            const handlePayInsurance = (policy) => {
+                if (!validateBalance(policy.premium, data.transactions)) return;
+
+                if(confirm(`ยืนยันการจ่ายเบี้ยประกัน "${policy.company}" ยอด ${formatMoney(policy.premium)}?`)) {
+                     onBatchAddTransaction([{ id: generateId(), type: 'expense', amount: policy.premium, category: 'สุขภาพ', date: new Date().toISOString().split('T')[0], note: `Auto: เบี้ยประกัน ${policy.company}` }]);
+                }
+            };
+
+            return (
+                <div className="space-y-6 pb-24 animate-fade-in">
+                    <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+                        <button onClick={()=>setTab('portfolio')} className={`font-bold pb-2 px-2 ${tab==='portfolio'?'text-primary dark:text-emerald-400 border-b-2 border-primary dark:border-emerald-400':'text-slate-400 dark:text-slate-500'}`}>กรมธรรม์ของฉัน</button>
+                        <button onClick={()=>setTab('guide')} className={`font-bold pb-2 px-2 ${tab==='guide'?'text-primary dark:text-emerald-400 border-b-2 border-primary dark:border-emerald-400':'text-slate-400 dark:text-slate-500'}`}>แนะนำประกัน</button>
+                    </div>
+                    
+                    {tab==='portfolio'&&(<><div className="card-std p-5"><div className="grid md:grid-cols-6 gap-3 mb-4"><input placeholder="บริษัท/แผน" value={form.company} onChange={e=>setForm({...form,company:e.target.value})} className="input-std md:col-span-2"/><input type="number" step="0.01" placeholder="เบี้ย/ปี" value={form.premium} onChange={e=>setForm({...form,premium:e.target.value})} className="input-std"/><div className="flex flex-col justify-center"><input type="date" value={form.dueDate} onChange={e=>setForm({...form,dueDate:e.target.value})} className="input-std text-sm"/></div><button onClick={()=>{onUpdateInsurance([...data.insurance,{id:generateId(),...form,premium:parseFloat(form.premium)}]);setForm({company:'',premium:'',coverage:'',type:'health',dueDate:''})}} className="btn-primary md:col-span-6 mt-2">เพิ่มกรมธรรม์</button></div></div>
+                    <div className="space-y-3">{data.insurance.map(i => {
+                        const paid = isPaidThisMonth(i.company);
+                        return (
+                            <div key={i.id} className="card-std p-4 flex justify-between items-center">
+                                <div>
+                                    <p className="font-bold text-slate-700 dark:text-slate-200">{i.company}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">เบี้ย {formatMoney(i.premium)} {i.dueDate && ` | ครบกำหนด: ${new Date(i.dueDate).toLocaleDateString('th-TH')}`}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {paid ? (
+                                        <span className="text-xs bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded font-bold cursor-default flex items-center gap-1"><Icon name="check" size={12}/> ชำระแล้ว</span>
+                                    ) : (
+                                        <button onClick={()=>handlePayInsurance(i)} className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 shadow-sm transition flex items-center gap-1"><Icon name="credit-card" size={12}/> ชำระเบี้ย</button>
+                                    )}
+                                    <button onClick={()=>onUpdateInsurance(data.insurance.filter(x=>x.id!==i.id))} className="text-slate-300 dark:text-slate-500 hover:text-red-500 ml-2"><Icon name="trash" size={16}/></button>
+                                </div>
+                            </div>
+                        );
+                    })}</div></>)}
+                    
+                    {tab==='guide'&&(
+                        <div className="grid gap-4">
+                            {insuranceInfo.map((info,idx)=>(
+                                <div key={idx} className="card-std p-5 border-l-4 border-l-blue-500 hover:shadow-lg transition cursor-default">
+                                    <div className="flex justify-between items-start">
+                                        <h3 className="font-bold text-slate-800 dark:text-slate-200 text-lg">{info.title}</h3>
+                                        <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 px-2 py-1 rounded font-bold">เบี้ย {info.cost}/ปี</span>
+                                    </div>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">{info.desc}</p>
+                                    <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2 rounded border dark:border-slate-700">🎯 เหมาะสำหรับ: {info.target}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) 
+        };
+
+        // --- Notes ---
+        const Notes = ({ data, onUpdateNotes }) => {
+            const [text, setText] = useState('');
+            const addNote = (e) => { 
+                e.preventDefault(); 
+                if (!text.trim()) return; 
+                onUpdateNotes([{ id: generateId(), text, completed: false, date: new Date().toISOString() }, ...(data.notes || [])]); 
+                setText(''); 
+            };
+            const toggleNote = (id) => onUpdateNotes((data.notes||[]).map(n => n.id === id ? { ...n, completed: !n.completed } : n));
+            const deleteNote = (id) => onUpdateNotes((data.notes||[]).filter(n => n.id !== id));
+            const moveNote = (index, direction) => {
+                const newNotes = [...(data.notes || [])];
+                const targetIndex = index + direction;
+                if (targetIndex < 0 || targetIndex >= newNotes.length) return;
+                const temp = newNotes[index]; newNotes[index] = newNotes[targetIndex]; newNotes[targetIndex] = temp;
+                onUpdateNotes(newNotes);
+            };
+            return ( <div className="space-y-6 pb-24 animate-fade-in"> <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">บันทึกช่วยจำ (จัดเรียงได้)</h2> <form onSubmit={addNote} className="card-std p-2 flex items-center gap-2"> <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="พิมพ์สิ่งที่ต้องทำ..." className="flex-1 p-3 bg-transparent outline-none dark:text-white"/> <button className="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-xl"><Icon name="plus" /></button> </form> <div className="space-y-3"> {(data.notes || []).map((note, index) => ( <div key={note.id} className={`card-std p-4 flex items-center justify-between ${note.completed ? 'opacity-60 bg-slate-50 dark:bg-slate-900/50' : ''}`}> <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => toggleNote(note.id)}> <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${note.completed ? 'bg-green-500 border-green-500' : 'border-slate-300 dark:border-slate-500'}`}> {note.completed && <Icon name="check" size={14} className="text-white" />} </div> <p className={`text-sm ${note.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-200'}`}>{note.text}</p> </div> <div className="flex items-center gap-1"> <div className="flex flex-col mr-2"> <button onClick={() => moveNote(index, -1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 dark:text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 disabled:opacity-30" disabled={index === 0}><Icon name="chevron-up" size={14}/></button> <button onClick={() => moveNote(index, 1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 dark:text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 disabled:opacity-30" disabled={index === (data.notes || []).length - 1}><Icon name="chevron-down" size={14}/></button> </div> <button onClick={() => deleteNote(note.id)} className="text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400"><Icon name="trash-2" size={18} /></button> </div> </div> ))} </div> </div> );
+        };
+
+        const Backup = ({ data, onImport }) => { const handleExport = () => { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "smartmoney_backup.json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); }; const handleImport = (e) => { const fileReader = new FileReader(); fileReader.readAsText(e.target.files[0], "UTF-8"); fileReader.onload = e => { try { const importedData = JSON.parse(e.target.result); if(confirm("การนำเข้าจะทับข้อมูลปัจจุบันทั้งหมด ยืนยันหรือไม่?")) { onImport(importedData); alert("นำเข้าข้อมูลสำเร็จ"); } } catch(err) { alert("ไฟล์ไม่ถูกต้อง"); } }; }; return ( <div className="space-y-6 pb-24 animate-fade-in"> <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">จัดการข้อมูล (Backup)</h2> <div className="grid md:grid-cols-2 gap-4"> <div onClick={handleExport} className="card-std p-6 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 group"> <Icon name="download-cloud" size={48} className="text-blue-200 dark:text-blue-900 group-hover:text-blue-500 dark:group-hover:text-blue-400 mb-4 transition-colors"/> <h3 className="font-bold text-slate-700 dark:text-slate-200">ส่งออกข้อมูล (Export)</h3> <p className="text-xs text-slate-400 mt-2">ดาวน์โหลดไฟล์ JSON เก็บไว้ในเครื่อง</p> </div> <div className="card-std p-6 flex flex-col items-center justify-center relative hover:border-emerald-500 dark:hover:border-emerald-400 group"> <Icon name="upload-cloud" size={48} className="text-emerald-200 dark:text-emerald-900 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 mb-4 transition-colors"/> <h3 className="font-bold text-slate-700 dark:text-slate-200">นำเข้าข้อมูล (Import)</h3> <p className="text-xs text-slate-400 mt-2">กู้คืนข้อมูลจากไฟล์ JSON</p> <input type="file" onChange={handleImport} className="absolute inset-0 opacity-0 cursor-pointer" accept=".json"/> </div> </div> </div> ); };
+
+        // --- Main App ---
+        const App = () => {
+    const [user, setUser] = useState(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const isCloudSyncingRef = useRef(false);
+
+            const [view, setView] = useState('dashboard');
+            const [activeTab, setActiveTab] = useState('portfolio'); 
+            
+            // Theme State
+            const [isDarkMode, setIsDarkMode] = useState(() => {
+                const savedTheme = localStorage.getItem('smartmoney_theme');
+                if (savedTheme) return savedTheme === 'dark';
+                return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            });
+
+            useEffect(() => {
+                if (isDarkMode) {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('smartmoney_theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('smartmoney_theme', 'light');
+                }
+            }, [isDarkMode]);
+
+            const toggleTheme = () => setIsDarkMode(!isDarkMode);
+            
+            // Database State
+            const [data, setData] = useState(() => {
+                const saved = localStorage.getItem('smartmoney_pro_db');
+                return saved ? JSON.parse(saved) : { 
+                    transactions: [], assets: [], debts: [], insurance: [], goals: [], 
+                    subscriptions: [], notes: [], dcaPlans: [], 
+                    customCategories: { expense: [], income: [] }, 
+                    budgets: {},
+                    profile: { name: 'User', age: 30, riskTolerance: 'medium' },
+                    retirement: { currentAge: 30, retireAge: 60, lifeExpectancy: 85, currentSavings: 0, monthlySaving: 0, expectedReturn: 5, expenseAfterRetire: 20000, autoSaveDay: '' } 
+                };
+            });
+
+            
+    const dataRef = useRef(data);
+    useEffect(() => { dataRef.current = data; }, [data]);
+
+    useEffect(() => {
+        if (window.onAuthChange) {
+            window.onAuthChange((u) => {
+                setUser(u);
+                if (!u) isCloudSyncingRef.current = false;
+            });
+        }
+    }, []);
+
+    useEffect(() => {
+        if (user && window.setupRealtimeSync) {
+            const unsub = window.setupRealtimeSync(user.uid, 
+                (cloudData) => {
+                    if (JSON.stringify(cloudData) !== JSON.stringify(dataRef.current)) {
+                        isCloudSyncingRef.current = true;
+                        setData(cloudData);
+                        setTimeout(() => { isCloudSyncingRef.current = false; }, 500);
+                    }
+                },
+                () => {
+                    if (window.saveToCloud) {
+                        setIsSyncing(true);
+                        window.saveToCloud(user.uid, dataRef.current).then(() => setIsSyncing(false));
+                    }
+                }
+            );
+            return () => { if(typeof unsub === 'function') unsub(); };
+        }
+    }, [user]);
+
+    const isFirstRender = useRef(true);
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+        localStorage.setItem('smartmoney_pro_db', JSON.stringify(data));
+        if (user && !isCloudSyncingRef.current && window.saveToCloud) {
+            setIsSyncing(true);
+            window.saveToCloud(user.uid, data).then(() => setIsSyncing(false));
+        }
+    }, [data]);
+
+
+            const updateData = (field, value) => setData(prev => ({ ...prev, [field]: value }));
+            const batchAddTransaction = (newItems) => setData(prev => ({ ...prev, transactions: [...prev.transactions, ...newItems] }));
+            const updateTransaction = (newList) => setData(prev => ({ ...prev, transactions: newList }));
+            
+            const updateCategories = (type, newCategories) => {
+                setData(prev => ({
+                    ...prev,
+                    customCategories: {
+                        ...(prev.customCategories || { expense: [], income: [] }),
+                        [type]: newCategories
+                    }
+                }));
+            };
+
+            const processAction = (action) => {
+                const amount = parseFloat(action.amount);
+                
+                // เช็คยอดเงินช็อต
+                if (action.type !== 'income' && !validateBalance(amount, data.transactions)) return;
+
+                if (confirm(`ต้องการดำเนินการ "${action.title}" ยอด ${formatMoney(action.amount)}?`)) {
+                    const isRecurringBill = action.title.includes('รายจ่ายประจำ:');
+                    
+                    batchAddTransaction([{
+                        id: generateId(),
+                        type: 'expense',
+                        amount: amount,
+                        category: action.type.includes('invest') || action.type === 'retire_save' ? 'การลงทุน' : (isRecurringBill ? 'รายจ่ายประจำ' : 'รายจ่ายประจำ'),
+                        date: new Date().toISOString().split('T')[0],
+                        note: `Auto: ${action.title}`
+                    }]);
+
+                    if (action.type === 'retire_save') {
+                        const currentSavings = parseFloat(data.retirement.currentSavings) || 0;
+                        updateData('retirement', {
+                            ...data.retirement,
+                            currentSavings: currentSavings + amount
+                        });
+                    }
+
+                    alert("ทำรายการสำเร็จ!");
+                }
+            };
+
+            const handleChangeView = (newView, tab = null) => {
+                setView(newView);
+                if (tab) {
+                    setActiveTab(tab);
+                } else {
+                    if (newView === 'assets') setActiveTab('portfolio');
+                    else if (newView === 'insurance') setActiveTab('portfolio');
+                    else if (newView === 'debts') setActiveTab('list');
+                }
+            };
+
+            const menu = [
+                { id: 'dashboard', label: 'ภาพรวม', icon: 'layout-grid' },
+                { id: 'analytics', label: 'วิเคราะห์', icon: 'pie-chart' },
+                { id: 'monthly', label: 'รายเดือน', icon: 'calendar' },
+                { id: 'wallet', label: 'รับ-จ่าย', icon: 'wallet' },
+                { id: 'assets', label: 'สินทรัพย์', icon: 'trending-up' },
+                { id: 'debts', label: 'หนี้สิน/บิล', icon: 'banknote' },
+                { id: 'tax', label: 'ภาษี', icon: 'receipt' },
+                { id: 'insurance', label: 'ประกัน', icon: 'shield' },
+                { id: 'retirement', label: 'เกษียณ', icon: 'palmtree' },
+                { id: 'notes', label: 'บันทึก', icon: 'sticky-note' },
+                { id: 'backup', label: 'ข้อมูล', icon: 'database' },
+            ];
+
+            return (
+                <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+                    <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 h-screen sticky top-0 p-5">
+                        <div className="flex items-center gap-3 px-2 mb-8"><div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Icon name="gem" size={24} /></div><div><h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">SmartMoney</h1><span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md">PRO</span></div></div>
+                        <nav className="flex-1 space-y-1 overflow-y-auto hide-scrollbar custom-scrollbar">
+                            {menu.map(item => (
+                                <button key={item.id} onClick={() => handleChangeView(item.id)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all font-medium text-sm ${view === item.id ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                    <Icon name={item.icon} size={18} /> {item.label}
+                                </button>
+                            ))}
+                        </nav>
+                        
+                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex flex-col gap-2">
+                            <button onClick={toggleTheme} className="flex items-center justify-center gap-2 w-full p-2 rounded-xl text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 transition border border-slate-100 dark:border-slate-800">
+                                <Icon name={isDarkMode ? "sun" : "moon"} size={16} />
+                                <span className="text-sm font-medium">{isDarkMode ? 'สลับโหมดสว่าง' : 'สลับโหมดมืด'}</span>
+                            </button>
+                            <div className="text-center mt-2">
+<p className="text-xs text-slate-400 mb-1">พัฒนาโดย</p>
+<p className="text-sm font-bold text-slate-700 dark:text-slate-300">คุณศิรสิทธิ์ รักทอง</p>
+</div>
+<div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+    {user ? (
+        <div className="flex items-center justify-between bg-blue-50/50 dark:bg-slate-800/50 p-2 rounded-xl border border-blue-100/50 dark:border-slate-700">
+            <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs shrink-0 font-bold">{user.email?.charAt(0).toUpperCase()}</div>
+                <div className="flex flex-col overflow-hidden">
+                    <span className="truncate text-xs text-slate-600 dark:text-slate-300 font-medium">{user.email}</span>
+                    <span className="text-[9px] text-emerald-500 flex items-center gap-1">
+                        {isSyncing ? <><Icon name="loader" size={8} className="animate-spin"/> Syncing</> : <><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Online</>}
+                    </span>
+                </div>
+            </div>
+            <button onClick={window.signOutUser} className="text-slate-400 hover:text-red-500 shrink-0 ml-1 p-1"><Icon name="log-out" size={14}/></button>
+        </div>
+    ) : (
+        <button onClick={window.signInWithGoogle} className="w-full bg-blue-500 hover:bg-blue-600 shadow-sm text-white text-xs font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition">
+            <Icon name="log-in" size={14}/> เข้าสู่ระบบ (Sync)
+        </button>
+    )}
+</div>
+                        </div>
+                    </aside>
+                    
+                    <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full overflow-y-auto">
+                        <div className="md:hidden flex justify-between items-center mb-6 pb-3 border-b border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center text-white"><Icon name="gem" size={16} /></div>
+                                <h1 className="font-bold text-lg dark:text-white">SmartMoney <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1 rounded ml-1">PRO</span></h1>
+                            </div>
+                            <div className="flex items-center gap-2">
+<button onClick={toggleTheme}  className="p-2 rounded-xl text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 active:scale-95 transition">
+<Icon name={isDarkMode ? "sun" : "moon"} size={18} />
+</button>
+{user ? (
+    <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-1 pr-2 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm cursor-pointer hover:bg-slate-50 transition" onClick={window.signOutUser} title="ออกจากระบบ">
+        <div className="w-7 h-7 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+            <span className="text-xs font-bold">{user.email?.charAt(0).toUpperCase()}</span>
+        </div>
+        {isSyncing ? <Icon name="loader" size={12} className="animate-spin text-emerald-500 ml-1" /> : <Icon name="log-out" size={12} className="text-red-400 ml-1" />}
+    </div>
+) : (
+    <button onClick={window.signInWithGoogle} className="text-[10px] bg-blue-500 text-white px-3 py-2 rounded-xl flex items-center gap-1 shadow-sm hover:bg-blue-600 transition">
+        เข้าสู่ระบบ
+    </button>
+)}
+</div>
+                        </div>
+
+                        {view === 'dashboard' && <Dashboard data={data} onChangeView={handleChangeView} onProcessAction={processAction} onUpdateNotes={n => updateData('notes', n)} onUpdateBudgets={b => updateData('budgets', b)} />}
+                        {view === 'analytics' && <Analytics data={data} onUpdateProfile={p => updateData('profile', p)} />}
+                        {view === 'monthly' && <MonthlyReport data={data} onBatchAddTransaction={batchAddTransaction} />}
+                        {view === 'wallet' && <Transactions data={data} onUpdateTransaction={updateTransaction} onDeleteTransaction={id => updateData('transactions', data.transactions.filter(t => t.id !== id))} onBatchAddTransaction={batchAddTransaction} onUpdateCategories={updateCategories}/>}
+                        {view === 'assets' && <Assets data={data} onUpdateAssets={a => updateData('assets', a)} onUpdateDcaPlans={p => updateData('dcaPlans', p)} onUpdateProfile={p => updateData('profile', p)} onBatchAddTransaction={batchAddTransaction} initialTab={activeTab} />}
+                        {view === 'retirement' && <Retirement data={data} onUpdateRetirement={r => updateData('retirement', r)} onBatchAddTransaction={batchAddTransaction} />}
+                        {view === 'debts' && <Debts data={data} onUpdateDebts={d => updateData('debts', d)} onBatchAddTransaction={batchAddTransaction} />}
+                        {view === 'tax' && <TaxCalculator data={data} />}
+                        {view === 'insurance' && <Insurance data={data} onUpdateInsurance={i => updateData('insurance', i)} onBatchAddTransaction={batchAddTransaction} />}
+                        {view === 'notes' && <Notes data={data} onUpdateNotes={n => updateData('notes', n)} />}
+                        {view === 'backup' && <Backup data={data} onImport={setData} />}
+                    </main>
+                    <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 p-2 z-50 overflow-x-auto hide-scrollbar"><div className="flex justify-between min-w-max px-2 gap-1">{menu.map(item => (<button key={item.id} onClick={() => handleChangeView(item.id)} className={`flex flex-col items-center justify-center min-w-[4rem] p-2 rounded-xl transition ${view === item.id ? 'text-primary dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}><Icon name={item.icon} size={24} className={view === item.id ? 'fill-current opacity-20 stroke-2' : 'stroke-1.5'} /><span className="text-[10px] font-medium mt-1">{item.label}</span></button>))}</div></nav>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+
+<!-- Firebase Compat Libraries -->
+<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBdMDSDuX6p6mBvJHePwHi273uBTtT7A6E",
+        authDomain: "dairy-puzzle-quiz.firebaseapp.com",
+        projectId: "dairy-puzzle-quiz",
+        storageBucket: "dairy-puzzle-quiz.firebasestorage.app",
+        messagingSenderId: "638793633329",
+        appId: "1:638793633329:web:95a77f177f2eecc2148f10",
+        measurementId: "G-ED5P8T3NPF"
+    };
+
+    const isCloudEnv = window.location.protocol !== 'file:';
+    let app, auth, db;
+    let authChangeCallbacks = [];
+
+    if (isCloudEnv) {
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.firestore();
+
+            // Enable offline persistence
+            db.enablePersistence().catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn("Multiple tabs open, persistence can only be enabled in one tab at a a time.");
+                } else if (err.code == 'unimplemented') {
+                    console.warn("The current browser does not support all of the features required to enable persistence");
+                }
+            });
+
+            auth.onAuthStateChanged((user) => {
+                authChangeCallbacks.forEach(cb => cb(user));
+            });
+        } catch (error) {
+            console.error("Firebase init failed:", error);
+        }
+    }
+
+    window.onAuthChange = (cb) => {
+        if (!isCloudEnv) return;
+        authChangeCallbacks.push(cb);
+        if (auth && auth.currentUser) {
+            cb(auth.currentUser);
+        }
+    };
+
+    window.signInWithGoogle = async () => {
+        if (!isCloudEnv || !auth) return alert("Firebase disabled: คุณกำลังเปิดไฟล์ html แบบออฟไลน์ (file://) กรุณาใช้งานผ่านลิงก์ EdgeOne ที่โฮสต์ไว้ครับ");
+        try {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            await auth.signInWithPopup(provider);
+        } catch (error) {
+            console.error("Login failed:", error);
+            alert("Login failed: " + error.message);
+        }
+    };
+
+    window.signOutUser = async () => {
+        if (!isCloudEnv || !auth) return;
+        try {
+            await auth.signOut();
+        } catch (error) {
+            console.error("Sign out failed:", error);
+        }
+    };
+
+    let unsubscribeProfile = null;
+    window.setupRealtimeSync = (uid, onDataReceived, onCloudEmpty) => {
+        if (!isCloudEnv || !db) return;
+        if (unsubscribeProfile) unsubscribeProfile();
+        
+        const userRef = db.collection('artifacts').doc('smartmoney_pro_v1').collection('users').doc(uid);
+        
+        unsubscribeProfile = userRef.collection('save').doc('profile').onSnapshot(async (profileSnap) => {
+            if (profileSnap.exists) {
+                const profileData = profileSnap.data().db;
+                try {
+                    // Fetch all transaction chunks
+                    const txSnap = await userRef.collection('transactions').get();
+                    let allTxs = [];
+                    txSnap.forEach(doc => {
+                        if (doc.data().txs) allTxs = allTxs.concat(doc.data().txs);
+                    });
+                    
+                    const fullData = { ...profileData, transactions: allTxs };
+                    onDataReceived(fullData);
+                } catch(err) {
+                    console.error("Error fetching transactions", err);
+                }
+            } else {
+                // Backward compatibility: load from legacy document if profile doesn't exist
+                const legacyDocRef = userRef.collection('save').doc('data');
+                legacyDocRef.get().then(docSnap => {
+                    if (docSnap.exists) {
+                        onDataReceived(docSnap.data().db);
+                    } else {
+                        if (onCloudEmpty) onCloudEmpty();
+                    }
+                }).catch(err => {
+                    console.error("Legacy load failed", err);
+                });
+            }
+        });
+        return unsubscribeProfile;
+    };
+
+    window.saveToCloud = async (uid, data) => {
+        if (!isCloudEnv || !db) return;
+        try {
+            const batch = db.batch();
+            const userRef = db.collection('artifacts').doc('smartmoney_pro_v1').collection('users').doc(uid);
+            
+            // Separate transactions from profile to bypass 1MB limit
+            const { transactions, ...profileData } = data;
+            
+            batch.set(userRef.collection('save').doc('profile'), { db: profileData, updated_at: new Date().toISOString() });
+            
+            if (transactions && transactions.length > 0) {
+                // Group transactions by YYYY-MM
+                const txByMonth = {};
+                transactions.forEach(t => {
+                    const monthStr = t.date ? t.date.substring(0, 7) : 'unknown';
+                    if(!txByMonth[monthStr]) txByMonth[monthStr] = [];
+                    txByMonth[monthStr].push(t);
+                });
+                
+                // Write each month chunk
+                for (const month in txByMonth) {
+                    batch.set(userRef.collection('transactions').doc(month), { txs: txByMonth[month] });
+                }
+            }
+            
+            await batch.commit();
+        } catch (error) {
+            console.error("Cloud save failed:", error);
+        }
+    };
+</script>
+</body>
+</html>
