@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SmartMoney Pro - บริหารการเงินครบวงจร</title>
     <!-- App Icons -->
-    <link rel="icon" href="smartmoney_icon.png" type="image/png">
-    <link rel="apple-touch-icon" href="smartmoney_icon.png">
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon.png">
     <meta name="theme-color" content="#0f172a">
 
     
@@ -482,7 +482,8 @@
                              <p className="text-xs text-emerald-100 mt-4 opacity-90">*รวมยอดยกมาจากเดือนก่อนหน้าทั้งหมด</p>
                         </div>
 
-                        <div className={`rounded-3xl p-6 shadow-lg border ${cashFlow >= 0 ? 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30'} flex flex-col justify-center`}>
+                        <div className="grid md:grid-cols-2 gap-4 mb-6">
+<div className={`rounded-3xl p-6 shadow-lg border ${cashFlow >= 0 ? 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30'} flex flex-col justify-center`}>
                             <div className="flex justify-between items-start mb-2">
                                 <p className="text-slate-500 dark:text-slate-400 text-sm font-medium flex items-center gap-2"><Icon name="activity" size={16}/> กระแสเงินสดเดือนนี้</p>
                                 <span className={`text-xs px-2 py-1 rounded-full ${cashFlow >= 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>{cashFlow >= 0 ? '+' : '-'}</span>
@@ -494,7 +495,73 @@
                         </div>
                     </div>
 
-                    <div className="card-std p-5 border-l-4 border-l-purple-500">
+                    
+
+                        {(() => {
+                            if (!data.categoryLimits || Object.keys(data.categoryLimits).length === 0) {
+                                return (
+                                    <div className="rounded-3xl p-6 shadow-lg border bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 flex flex-col justify-center items-center text-slate-400">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mb-2 opacity-50"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                        <p className="text-sm font-bold">แจ้งเตือนวงเงิน</p>
+                                        <p className="text-xs">ยังไม่ได้ตั้งค่าจำกัดวงเงิน</p>
+                                    </div>
+                                );
+                            }
+                            
+                            const todayStr = new Date().toLocaleString('en-CA', {timeZone: 'Asia/Bangkok'}).split(',')[0];
+                            const monthStr = todayStr.substring(0, 7);
+                            let worstAlert = null;
+                            let worstPercent = -1;
+                            
+                            Object.entries(data.categoryLimits).forEach(([cat, limits]) => {
+                                const spentToday = (data.transactions||[]).filter(t => t.category === cat && t.date === todayStr && t.type === 'expense').reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                                const spentMonth = (data.transactions||[]).filter(t => t.category === cat && t.date.startsWith(monthStr) && t.type === 'expense').reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                                
+                                if (limits.daily > 0) {
+                                    const pct = (spentToday / limits.daily) * 100;
+                                    if (pct > worstPercent) {
+                                        worstPercent = pct;
+                                        worstAlert = { cat, type: 'รายวัน', spent: spentToday, limit: limits.daily, pct };
+                                    }
+                                }
+                                if (limits.monthly > 0) {
+                                    const pct = (spentMonth / limits.monthly) * 100;
+                                    if (pct > worstPercent) {
+                                        worstPercent = pct;
+                                        worstAlert = { cat, type: 'รายเดือน', spent: spentMonth, limit: limits.monthly, pct };
+                                    }
+                                }
+                            });
+                            
+                            if (!worstAlert) return <div className="rounded-3xl p-6 shadow-lg border bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 flex flex-col justify-center items-center text-slate-400"><p className="text-sm">ไม่มีข้อมูลการใช้จ่าย</p></div>;
+                            
+                            const isOver = worstAlert.spent > worstAlert.limit;
+                            const remain = worstAlert.limit - worstAlert.spent;
+                            
+                            return (
+                                <div className={`rounded-3xl p-6 shadow-lg border flex flex-col justify-center ${isOver ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-900' : 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-900'}`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <p className={`text-sm font-bold flex items-center gap-2 ${isOver ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> 
+                                            {isOver ? 'ใช้เงินเกินงบที่ตั้งไว้!' : 'งบประมาณปลอดภัย'}
+                                        </p>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mb-1">หมวด: <span className="font-bold text-slate-700 dark:text-slate-200">{worstAlert.cat} ({worstAlert.type})</span></p>
+                                    <div className="flex justify-between mt-1 text-xs">
+                                        <span className="text-slate-600 dark:text-slate-400">ใช้ไป: {formatMoney(worstAlert.spent)}</span>
+                                        <span className={isOver ? 'text-red-500 font-bold' : 'text-emerald-600 font-bold'}>
+                                            {isOver ? `เกินมา ${formatMoney(-remain)}` : `เหลือใช้ได้ ${formatMoney(remain)}`}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mt-3 overflow-hidden">
+                                        <div className={`h-full rounded-full ${isOver ? 'bg-red-500' : worstAlert.pct > 80 ? 'bg-orange-400' : 'bg-emerald-500'}`} style={{width: `${Math.min(worstAlert.pct, 100)}%`}}></div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+        
+</div>
+<div className="card-std p-5 border-l-4 border-l-purple-500">
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2"><Icon name="sticky-note" className="text-purple-500"/> บันทึกช่วยจำ (Quick Notes)</h3>
                             <button onClick={() => onChangeView('notes')} className="text-xs text-purple-500 hover:underline">จัดการทั้งหมด</button>
@@ -2372,7 +2439,7 @@
             return (
                 <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-300">
                     <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 h-screen sticky top-0 p-5">
-                        <div className="flex items-center gap-3 px-2 mb-8"><div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Icon name="gem" size={24} /></div><div><h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">SmartMoney</h1><span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md">PRO</span></div></div>
+                        <div className="flex items-center gap-3 px-2 mb-8"><img src="icon.png" className="w-10 h-10 rounded-xl shadow-lg object-cover" alt="SmartMoney Logo" /><div><h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">SmartMoney</h1><span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md">PRO</span></div></div>
                         <nav className="flex-1 space-y-1 overflow-y-auto hide-scrollbar custom-scrollbar">
                             {menu.map(item => (
                                 <button key={item.id} onClick={() => handleChangeView(item.id)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all font-medium text-sm ${view === item.id ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
