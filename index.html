@@ -749,7 +749,7 @@
         const Transactions = ({ data, onUpdateTransaction, onDeleteTransaction, onBatchAddTransaction, onUpdateCategories }) => { 
             const [form, setForm] = useState({ id: null, type: 'expense', amount: '', category: '', date: new Date().toISOString().split('T')[0], note: '' });
             const [filter, setFilter] = useState({ type: 'all', month: new Date().toISOString().slice(0, 7) });
-            const [groupBy, setGroupBy] = useState('none');
+            const [groupBy, setGroupBy] = useState('date');
             const [isEditing, setIsEditing] = useState(false);
             const [showCatManager, setShowCatManager] = useState(false);
             const [newCatName, setNewCatName] = useState('');
